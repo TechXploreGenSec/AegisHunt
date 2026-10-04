@@ -27,6 +27,8 @@ harness/config/                 opencode.json + .env.bb.example (SECRETS REDACTE
                                 see harness/config/SECRETS.md), models.env, cli.json
 harness/mcp-tools/              external MCP servers (gh-runner, memory, telegram
                                 bots, report, poc-capture, man) + install.sh
+harness/scripts/fetch-methodology.sh  first-run bootstrap: HackTricks src (sparse)
+                                + community skills into ~/.config/opencode/skills/
 ```
 
 ## Enforcement model (why this isn't just prompts)
@@ -53,7 +55,9 @@ No secrets are needed for the build.
    `OPENCODE_VERSION=1.18.33 bun run --cwd packages/opencode build --single --skip-embed-web-ui`
 2. Restore secrets per `harness/config/SECRETS.md` → `~/.config/opencode/`
 3. Install MCP deps: `bash harness/mcp-tools/install.sh`
-4. Provide scope via the `scope_set` tool (coordinator rule #1), or
+4. Knowledge layer: `bash harness/scripts/fetch-methodology.sh`, then run
+   `methodology_index_build` once (agents enforce this via rule 0b)
+5. Provide scope via the `scope_set` tool (coordinator rule #1), or
    pre-seed `~/.config/opencode/scopes/`
 5. Launch through an env-loading wrapper (sources `.env.bb` first) —
    never the bare binary, or `SUPABASE_*`/`NEO4J_*`/`TELEGRAM_*` are unset.
