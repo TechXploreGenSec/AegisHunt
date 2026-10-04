@@ -307,7 +307,7 @@ const layer = Layer.effect(
             name: "recon",
             description: "Reconnaissance specialist: passive/active asset discovery within scope, writes to graph.",
             options: {},
-            mode: "subagent",
+            mode: "all",
             native: true,
             prompt: PROMPT_RECON,
             permission: Permission.merge(
@@ -340,7 +340,7 @@ const layer = Layer.effect(
             description:
               "Interaction-tier verification specialist: only agent for live interactive testing, gated by explicit approval.",
             options: {},
-            mode: "subagent",
+            mode: "all",
             native: true,
             prompt: PROMPT_VERIFICATION,
             color: "#ef4444",
@@ -392,7 +392,7 @@ const layer = Layer.effect(
             name: "reporting",
             description: "Security reporting specialist: turns verified findings into evidence-backed reports.",
             options: {},
-            mode: "subagent",
+            mode: "all",
             native: true,
             prompt: PROMPT_REPORTING,
             permission: Permission.merge(
