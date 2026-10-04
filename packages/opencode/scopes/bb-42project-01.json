@@ -1,0 +1,29 @@
+{
+  "programId": "bb-42project-01",
+  "inScope": [
+    "*.42project.app",
+    "github.com/42project/*",
+    "published mobile apps"
+  ],
+  "outOfScope": [
+    "Third-party services",
+    "Stripe",
+    "Exchanges",
+    "Cloud providers",
+    "Social engineering",
+    "Physical attacks",
+    "Denial-of-service"
+  ],
+  "allowedTestTypes": [
+    "manual-web-testing",
+    "manual-api-testing",
+    "authorization-testing",
+    "IDOR-testing",
+    "XSS-testing",
+    "CSRF-testing",
+    "privilege-escalation-testing",
+    "account-takeover-testing"
+  ],
+  "maxRequestsPerSecond": 2,
+  "executionMode": "local"
+}

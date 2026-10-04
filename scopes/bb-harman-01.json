@@ -1,0 +1,47 @@
+{
+  "programId": "bb-harman-01",
+  "inScope": [
+    "*.jbl.com",
+    "https://www.bowerswilkins.com",
+    "https://www.denon.com",
+    "https://www.marantz.com",
+    "*.harmanaudio.com",
+    "*.harmankardon.com",
+    "https://www.polkaudio.com",
+    "*.support.jbl.com",
+    "https://www.definitivetechnology.com",
+    "*.jbl.nl",
+    "https://www.classeaudio.com",
+    "*.jbl.ru",
+    "*.uk.jbl.com",
+    "*.uk.harmanaudio.com",
+    "*.de.jbl.com",
+    "*.in.jbl.com",
+    "*.jbl.com.br",
+    "https://www.bostonacoustics.com",
+    "*.roonlabs.com",
+    "*.roonlabs.net",
+    "*.roonessentials.com",
+    "*.roonessentials.net",
+    "*.roondrops.com",
+    "*.account.roon.app",
+    "*.roon.app",
+    "*.gotdrops.com",
+    "*.gotdrops.cloud"
+  ],
+  "outOfScope": [
+    "cloud.cloud2.harmanaudio.com",
+    "cloud.cloud1.harmanaudio.com",
+    "cloud.cloud3.harmanaudio.com",
+    "https://secondchance.jbl.com/module/stripe_official/createIntent",
+    "jp.harmanaudio.com",
+    "jp.jbl.com",
+    "https://devicedb.roonlabs.net/1/devicedb-*.zip",
+    "ALL_OTHER_DOMAINS_OR_SUBDOMAINS"
+  ],
+  "allowedTestTypes": [
+    "active-recon"
+  ],
+  "maxRequestsPerSecond": 5,
+  "executionMode": "auto"
+}

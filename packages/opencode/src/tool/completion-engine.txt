@@ -1,0 +1,7 @@
+Graph-computed endpoint completeness — the model never declares "done".
+
+endpoint_completion_score(endpointKey) — which vuln classes apply to this endpoint, how many have a real TestExecution, which are missing, and whether it is ready to mark assessed. Call before considering any endpoint done.
+
+endpoint_mark_assessed(endpointKey) — REFUSES unless every applicable class has a TestExecution. Either coverage is real or the call fails naming exactly what is missing.
+
+asset_generate_test_plan(assetKey) — the full granular plan: one item per (endpoint, applicable vuln class) pair from real recon data. Seed todowrite with every item, not a 5-6 item summary you write yourself.

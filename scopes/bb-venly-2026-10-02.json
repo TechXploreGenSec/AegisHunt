@@ -1,0 +1,15 @@
+{
+  "programId": "bb-venly-2026-10-02",
+  "inScope": [
+    "connect.venly.io"
+  ],
+  "outOfScope": [
+    "wallet.venly.io",
+    "api-wallet.venly.io"
+  ],
+  "allowedTestTypes": [
+    "active-recon"
+  ],
+  "maxRequestsPerSecond": 5,
+  "executionMode": "local"
+}

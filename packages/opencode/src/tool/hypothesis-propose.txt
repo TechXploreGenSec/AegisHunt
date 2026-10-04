@@ -1,0 +1,1 @@
+Record a candidate vulnerability theory against an endpoint or parameter, before any live testing happens. Requires rationale and methodology source.

@@ -1,0 +1,47 @@
+{
+  "manifest_version": "0.1",
+  "name": "man-mcp",
+  "version": "0.2.0",
+  "description": "MCP server for accessing Linux man pages",
+  "author": {
+    "name": "Guy Rutenberg",
+    "url": "https://guyrutenberg.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/guyru/man-mcp.git"
+  },
+  "homepage": "https://github.com/guyru/man-mcp",
+  "license": "MIT",
+  "server": {
+    "type": "python",
+    "entry_point": "server/main.py",
+    "mcp_config": {
+      "command": "python3",
+      "args": ["${__dirname}/server/main.py"],
+      "env": {
+        "PYTHONPATH": "${__dirname}/server/lib"
+      }
+    }
+  },
+  "compatibility": {
+    "runtimes": {
+      "python": ">=3.10"
+    }
+  },
+  "tools": [
+    {
+      "name": "search_man_pages",
+      "description": "Search for man pages that match a given query"
+    },
+    {
+      "name": "get_man_page",
+      "description": "Get the content of a specific man page"
+    },
+    {
+      "name": "list_man_sections",
+      "description": "List all available man page sections with descriptions"
+    }
+  ],
+  "prompts": []
+}

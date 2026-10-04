@@ -1,0 +1,1 @@
+Out-of-band interaction listener via interactsh-client. Plant trackable callback URLs in blind-vuln probes, poll for hits. A hit is strong signal — record via test_execution_record confirmed. Requires interactsh-client installed.

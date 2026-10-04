@@ -1,0 +1,29 @@
+{
+  "programId": "ywh-swisspost-evoting-2026-10-03",
+  "inScope": [
+    "gitlab.com/swisspost-evoting",
+    "gitlab.com/swisspost-evoting/*",
+    "gitlab.com/swisspost-evoting/*/*"
+  ],
+  "outOfScope": [
+    "evoting.ch",
+    "*.evoting.ch",
+    "pit.evoting.ch",
+    "demo.evoting.ch",
+    "gitlab.com/swisspost-evoting/e-voting-system-2019",
+    "gitlab.com/swisspost-evoting/-/tags/*",
+    "gitlab.com/swisspost-evoting/*/-/tags/*",
+    "gitlab.com/swisspost-evoting/*/*/-/tags/*",
+    "gitlab.com/swisspost-evoting/-/archive/*",
+    "gitlab.com/swisspost-evoting/*/-/archive/*",
+    "gitlab.com/swisspost-evoting/*/*/-/archive/*"
+  ],
+  "allowedTestTypes": [
+    "source-code-review",
+    "specification-review",
+    "protocol-cryptographic-analysis",
+    "static-analysis"
+  ],
+  "maxRequestsPerSecond": 1,
+  "executionMode": "local"
+}

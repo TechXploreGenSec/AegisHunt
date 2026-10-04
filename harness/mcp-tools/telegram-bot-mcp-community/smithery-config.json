@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "required": ["TELEGRAM_BOT_TOKEN"],
+  "properties": {
+    "TELEGRAM_BOT_TOKEN": {
+      "type": "string",
+      "description": "Telegram Bot API token from @BotFather"
+    },
+    "TELEGRAM_TIMEOUT": {
+      "type": "number",
+      "default": 30000,
+      "description": "Request timeout in milliseconds (default: 30000)"
+    },
+    "TELEGRAM_API_URL": {
+      "type": "string",
+      "default": "https://api.telegram.org",
+      "description": "Telegram Bot API base URL (default: https://api.telegram.org)"
+    }
+  }
+}

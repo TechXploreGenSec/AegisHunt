@@ -1,0 +1,1 @@
+Record what was actually done to test a hypothesis and its outcome. Required before a Finding can be produced. outcome ruled_out closes hypothesis negatively.

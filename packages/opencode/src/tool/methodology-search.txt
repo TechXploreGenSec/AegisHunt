@@ -1,0 +1,1 @@
+Search locally-indexed methodology (HackTricks clone or own checklists) via SQLite FTS5. No technique content baked in — index your own clone. Cite source_path.

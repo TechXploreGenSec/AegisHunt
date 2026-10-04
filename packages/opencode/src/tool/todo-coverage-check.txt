@@ -1,0 +1,1 @@
+Mechanical backstop for the bulk-todowrite rule: compare the live todowrite item count (read from Todo state, not narrated) against the generated plan size. Call with expectedMinimum set to asset_generate_test_plan's totalPlanItems, before phase_complete(testing).

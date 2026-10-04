@@ -1,0 +1,96 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [7 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+6 0 obj
+<< /Length 2592 >>
+stream
+0.15 0.39 0.75 rg
+0 800 595 42 re f
+0.1 0.1 0.1 rg
+BT /F1 9 Tf 1 0 0 1 54.00 814.00 Tm (Bug Bounty Report) Tj ET
+BT /F1 8 Tf 1 0 0 1 499.00 814.00 Tm (Page 1) Tj ET
+0.15 0.39 0.75 rg
+BT /F2 18 Tf 1 0 0 1 54.00 770.00 Tm (Cross-account object access) Tj ET
+0.08 0.25 0.50 rg
+BT /F2 12 Tf 1 0 0 1 54.00 725.00 Tm (Summary) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 54.00 702.00 Tm (Severity: High) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 54.00 687.00 Tm (Vulnerability class: IDOR) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 54.00 672.00 Tm (Affected target: https://example.test/api/invoices/123) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 54.00 642.00 Tm (An authenticated user can read another account's invoice.) Tj ET
+0.08 0.25 0.50 rg
+BT /F2 12 Tf 1 0 0 1 54.00 612.00 Tm (Steps to Reproduce) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 64.00 589.00 Tm (1. Log in as account A.) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 64.00 574.00 Tm (2. Request account B's invoice identifier.) Tj ET
+0.08 0.25 0.50 rg
+BT /F2 12 Tf 1 0 0 1 54.00 544.00 Tm (Proof of Concept) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 54.00 521.00 Tm (The response contains account B's invoice data.) Tj ET
+0.08 0.25 0.50 rg
+BT /F2 12 Tf 1 0 0 1 54.00 491.00 Tm (Request) Tj ET
+0.12 0.12 0.12 rg
+BT /F3 8 Tf 1 0 0 1 54.00 468.00 Tm (GET /api/invoices/123 HTTP/1.1) Tj ET
+0.08 0.25 0.50 rg
+BT /F2 12 Tf 1 0 0 1 54.00 438.00 Tm (Response) Tj ET
+0.12 0.12 0.12 rg
+BT /F3 8 Tf 1 0 0 1 54.00 415.00 Tm ({"owner":"account-b"}) Tj ET
+0.08 0.25 0.50 rg
+BT /F2 12 Tf 1 0 0 1 54.00 385.00 Tm (Impact) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 54.00 362.00 Tm (Confidential invoice data is disclosed across tenant boundaries.) Tj ET
+0.08 0.25 0.50 rg
+BT /F2 12 Tf 1 0 0 1 54.00 332.00 Tm (Remediation) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 54.00 309.00 Tm (Authorize the invoice owner before returning the object.) Tj ET
+0.08 0.25 0.50 rg
+BT /F2 12 Tf 1 0 0 1 54.00 279.00 Tm (Scoring and Timeline) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 54.00 256.00 Tm (CVSS vector: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 54.00 241.00 Tm (CVSS score: 8.1) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 54.00 226.00 Tm (Affected users: Any authenticated customer.) Tj ET
+0.12 0.12 0.12 rg
+BT /F1 9.5 Tf 1 0 0 1 54.00 211.00 Tm (Discovered at: 2026-08-07T12:00:00.000Z) Tj ET
+0.55 0.55 0.55 rg
+BT /F1 7 Tf 1 0 0 1 54.00 30.00 Tm (Prepared locally ? Verify platform requirements before submission) Tj ET
+BT /F1 7 Tf 1 0 0 1 537.64 30.00 Tm (1) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 6 0 R >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000191 00000 n 
+0000000266 00000 n 
+0000000334 00000 n 
+0000002977 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+3123
+%%EOF

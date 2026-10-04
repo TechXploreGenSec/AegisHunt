@@ -1,0 +1,1 @@
+Traverse CHAINS_TO edges from a starting finding to surface candidate multi-hop paths for human review.

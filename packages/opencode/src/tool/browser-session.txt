@@ -1,0 +1,8 @@
+Headed real Chrome via Playwright for bot-protected targets; persistent session per program, mode, and engine, with real request/response and console listeners.
+
+MODE DISCIPLINE — read before choosing headless:
+- headless:true is fast and fine for plain targets, but headless fingerprints are a known bot-detection signal (Cloudflare challenges, PerimeterX, CAPTCHAs, 403/429/empty bodies).
+- If a headless call comes back blocked — 403/429/503 status, challenge/CAPTCHA title, or empty content — retry the SAME call with headless:false (headed real Chrome). Headed carries a genuine interactive fingerprint and routinely passes where headless is stopped. Escalate headless -> headed, never the reverse, when blocked.
+- headed needs a display (X server or xvfb-run under WSL); if headed cannot launch, say so and continue headless rather than failing silently.
+- Each headless/headed x chromium/chrome/msedge combination is a SEPARATE session: separate cookies, storage, and logs. Match headless+channel across navigate/fill/screenshot/log calls in one thread of work, or you will read another session's (empty) log. Outputs echo the active mode — check it.
+- navigate and fill_and_submit send live traffic (scope-gated). network/console/perf/close only read an authorized session.

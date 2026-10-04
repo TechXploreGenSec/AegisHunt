@@ -1,0 +1,15 @@
+{
+  "programId": "vulnweb-testasp",
+  "inScope": [
+    "testasp.vulnweb.com"
+  ],
+  "outOfScope": [
+    "*.acunetix.com",
+    "*.invicti.com"
+  ],
+  "allowedTestTypes": [
+    "active-recon"
+  ],
+  "maxRequestsPerSecond": 1,
+  "executionMode": "auto"
+}

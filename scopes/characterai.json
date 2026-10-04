@@ -1,0 +1,32 @@
+{
+  "programId": "characterai",
+  "inScope": [
+    "beta.character.ai",
+    "character.ai",
+    "next.character.ai",
+    "docs.character.ai",
+    "*.characterai.dev",
+    "*.charactertech.io",
+    "ai.character.app"
+  ],
+  "outOfScope": [
+    "blog.character.ai",
+    "book.character.ai",
+    "Stripe systems",
+    "third party services",
+    "c.ai+ subscription bypasses",
+    "prompt injection",
+    "DoS",
+    "rate limit/brute-force/ddos",
+    "content safety controls",
+    "outdated browser issues",
+    "open redirect without additional impact",
+    "tabnabbing"
+  ],
+  "allowedTestTypes": [
+    "active-recon",
+    "interaction"
+  ],
+  "maxRequestsPerSecond": 10,
+  "executionMode": "auto"
+}

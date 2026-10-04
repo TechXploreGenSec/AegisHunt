@@ -1,0 +1,1 @@
+Staleness cache around websearch for tool rankings. Never invent ranking — lookup, live search if stale, then record.

@@ -1,0 +1,1 @@
+Create a Finding from a TestExecution whose outcome was confirmed. Only path into the graph that ends in an actual Finding node.

@@ -1,0 +1,1 @@
+Run directory/content discovery via ffuf and write endpoints to graph. rateLimit must come from scope.computePerLaneRate, never guessed. Scope-gated.

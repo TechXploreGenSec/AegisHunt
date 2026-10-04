@@ -1,0 +1,1 @@
+Close one phase (recon, hypothesis, testing, reporting) for one asset with evidence. Requires tool-output references plus written answers to the phase's self-check questions — a phase without this record stays OPEN no matter what was attempted.

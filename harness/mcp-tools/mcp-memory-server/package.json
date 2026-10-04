@@ -1,0 +1,48 @@
+{
+  "name": "mcp-memory-server",
+  "version": "0.1.0",
+  "description": "MCP server providing structured memory & file storage for LLM-powered CLI tools — supports SQLite, Postgres/Supabase, and S3-compatible backends",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "memory",
+    "storage",
+    "sqlite",
+    "supabase",
+    "s3",
+    "llm"
+  ],
+  "license": "MIT",
+  "main": "dist/server.js",
+  "bin": {
+    "mcp-memory": "dist/server.js"
+  },
+  "files": [
+    "dist/**",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "esbuild src/server.ts --bundle --platform=node --outdir=dist --packages=external --format=cjs",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.844.0",
+    "@aws-sdk/s3-request-presigner": "^3.844.0",
+    "@modelcontextprotocol/sdk": "^1.15.1",
+    "@supabase/supabase-js": "^2.50.3",
+    "better-sqlite3": "^11.10.0",
+    "dotenv": "^16.5.0",
+    "uuid": "^11.1.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.3.3",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "~5.9.3"
+  }
+}

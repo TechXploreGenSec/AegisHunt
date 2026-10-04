@@ -1,0 +1,1 @@
+Create or update an asset-graph node (Program/Asset/Endpoint/Parameter/Credential/TechStack). Fixed label set — Hypothesis/TestExecution/Finding go through finding_ops instead. Idempotent MERGE-based, safe to call repeatedly.

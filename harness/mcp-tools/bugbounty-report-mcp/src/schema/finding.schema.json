@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bugbounty-report-mcp.local/schemas/finding.schema.json",
+  "title": "Bug bounty finding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "target",
+    "vulnerability_class",
+    "severity",
+    "summary",
+    "steps_to_reproduce",
+    "proof_of_concept",
+    "impact",
+    "discovered_at"
+  ],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "target": { "type": "string", "minLength": 1 },
+    "vulnerability_class": { "type": "string", "minLength": 1 },
+    "severity": {
+      "type": "string",
+      "enum": ["Critical", "High", "Medium", "Low", "Info"]
+    },
+    "cvss_vector": { "type": "string", "minLength": 1 },
+    "cvss_score": { "type": "number", "minimum": 0, "maximum": 10 },
+    "summary": { "type": "string", "minLength": 1 },
+    "steps_to_reproduce": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "proof_of_concept": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description"],
+      "properties": {
+        "description": { "type": "string", "minLength": 1 },
+        "request": { "type": "string" },
+        "response": { "type": "string" },
+        "screenshots": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "impact": { "type": "string", "minLength": 1 },
+    "remediation": { "type": "string" },
+    "affected_users": { "type": "string" },
+    "discovered_at": { "type": "string", "format": "date-time" },
+    "researcher_notes": { "type": "string" }
+  }
+}

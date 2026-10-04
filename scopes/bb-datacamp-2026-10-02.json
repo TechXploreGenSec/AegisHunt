@@ -1,0 +1,43 @@
+{
+  "programId": "bb-datacamp-2026-10-02",
+  "inScope": [
+    "profiles-api.datacamp.com",
+    "app.datacamp.com",
+    "assessment-api.datacamp.com",
+    "assessment-v2.datacamp.com",
+    "assessment.datacamp.com",
+    "campus.datacamp.com",
+    "practice.datacamp.com",
+    "projects.datacamp.com",
+    "www.datacamp.com",
+    "*.datacamp.com",
+    "sessions.datacamp.com",
+    "workspace-sessions.datacamp.com",
+    "multiplexer-prod.datacamp.com",
+    "multiplexer-paid.datacamp.com",
+    "mcp.datacamp.com",
+    "lms-api.datacamp.com"
+  ],
+  "outOfScope": [
+    "*.it.datacamp.com",
+    "app.datacamp.com/recruit",
+    "ast-viewer.datacamp.com",
+    "confluence.datacamp.com",
+    "dccertified.datacamp.com",
+    "intranet.datacamp.com",
+    "jira.datacamp.com",
+    "links.datacamp.com",
+    "rdocumentation.datacamp.com",
+    "signature.datacamp.com",
+    "status.datacamp.com",
+    "support.datacamp.com",
+    "talent-jobs-api.datacamp.com",
+    "datalab-docs.datacamp.com"
+  ],
+  "allowedTestTypes": [
+    "active-recon",
+    "interaction"
+  ],
+  "maxRequestsPerSecond": 5,
+  "executionMode": "auto"
+}

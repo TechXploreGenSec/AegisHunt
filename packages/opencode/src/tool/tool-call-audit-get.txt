@@ -1,0 +1,1 @@
+Debug tool: list recent audit-log entries for a program (optionally one target) so you can verify live-target calls are actually being recorded. Read-only — it never writes.

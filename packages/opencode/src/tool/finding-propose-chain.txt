@@ -1,0 +1,1 @@
+Propose that one finding chains into another. Always proposed=true until rule or human confirms.

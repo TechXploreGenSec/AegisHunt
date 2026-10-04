@@ -1,0 +1,25 @@
+{
+  "programId": "bb-ult-cronos-01",
+  "inScope": [
+    "api.cronos.com",
+    "com.defi.wallet",
+    "apps.apple.com/us/app/ult-trade-stocks-crypto/id1512048310"
+  ],
+  "outOfScope": [
+    "api.hyperliquid.xyz",
+    "*.polymarket.com",
+    "*.geckoterminal.com",
+    "*.coingecko.com",
+    "*.onramper",
+    "*.privy.io",
+    "*.alchemy.com"
+  ],
+  "allowedTestTypes": [
+    "active-recon",
+    "api-fuzzing",
+    "auth-bypass-testing",
+    "business-logic-testing"
+  ],
+  "maxRequestsPerSecond": 5,
+  "executionMode": "local"
+}

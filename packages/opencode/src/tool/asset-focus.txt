@@ -1,0 +1,1 @@
+Pin the single asset under active testing for a program. One focus at a time: set it before work starts, change it only when the asset is exhausted (all endpoints tested or blocked with a filed requirement). The sidebar and coordinator read this as the current front.

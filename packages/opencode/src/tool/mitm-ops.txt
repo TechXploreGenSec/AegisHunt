@@ -1,0 +1,1 @@
+mitmproxy traffic capture and interaction. start/stop/summary/search/inspect are passive. replay_flow and fuzz_endpoint are LIVE TARGET actions, scope-gated with per-lane rates. fuzz_endpoint additionally requires explicit operator approval via bot_notify_and_continue before use.

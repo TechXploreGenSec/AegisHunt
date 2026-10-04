@@ -1,0 +1,41 @@
+[project]
+name = "man-mcp-server"
+version = "0.1.0"
+description = "MCP server for accessing Linux man pages using FastMCP"
+license = { text = "MIT" }
+keywords = ["mcp", "man-pages", "documentation", "linux", "fastmcp"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux", 
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Documentation",
+    "Topic :: System :: Systems Administration",
+]
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Guy Rutenberg" },
+]
+dependencies = [
+    "mcp>=1.0.0,<2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/guyru/man-mcp-server"
+Repository = "https://github.com/guyru/man-mcp-server"
+Issues = "https://github.com/guyru/man-mcp-server/issues"
+
+dependencies = [
+    "mcp>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mcp[cli]",
+    # Consider adding: pytest, black, ruff for future development
+]

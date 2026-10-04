@@ -1,0 +1,9 @@
+Graph-computed asset progress — single-asset depth enforcement. Four tools:
+
+asset_set_current(programId, assetKey, priority?) — declare the ONE asset under test. Do not call for a new asset until the current one is complete or fully blocked.
+
+asset_progress_get(programId, assetKey) — compute real testing percent from the graph (endpoints → hypotheses → test executions + explicit blockers). Call after every test_execution_record, not just at the end. Never state a percentage yourself; call this and report what it returns.
+
+asset_mark_blocker(endpointKey, reason, attemptedWorkaround) — record an endpoint that cannot be tested, with what was tried. Blocked counts as terminal progress, not skipping.
+
+asset_get_queue(programId) — list incomplete assets in run order. Pick the next asset from here only after the current one reports isComplete.

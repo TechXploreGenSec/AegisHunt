@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.db
+.tool_call_audit.db
+.env.bb
+scopes/current.json
+tool-output/
+.opencode/
+*.log
+.DS_Store

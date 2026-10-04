@@ -1,0 +1,10 @@
+{
+  "programId": "bb-verify-01",
+  "inScope": [
+    "example.com"
+  ],
+  "outOfScope": [],
+  "allowedTestTypes": [],
+  "maxRequestsPerSecond": 5,
+  "executionMode": "local"
+}

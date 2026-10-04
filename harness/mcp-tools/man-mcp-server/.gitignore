@@ -1,0 +1,33 @@
+# Python generated files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution files
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv
+
+# IDE files
+.vscode/
+.idea/
+
+# Log files
+*.log
+
+# Test files
+.coverage
+.pytest_cache/
+
+# System files
+.DS_Store
+
+.github/copilot-instructions.md
+
+# Dynamically generated files
+*.mcpb
+**/server/lib/**

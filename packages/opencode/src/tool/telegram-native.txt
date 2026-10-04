@@ -1,0 +1,1 @@
+Native Telegram send/getUpdates via api.telegram.org. One token per role. Tracks offset per bot.
