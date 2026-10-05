@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION from "./hypothesis-propose.txt"
-import { runWriteEffect } from "./graph-db"
+import { runWriteEffect, runReadEffect } from "./graph-db"
 
 export const Parameters = Schema.Struct({
   programId: Schema.String,
@@ -21,7 +21,9 @@ export const Parameters = Schema.Struct({
   attachToKey: Schema.String,
   attachToKeyField: Schema.optional(Schema.String),
   rationale: Schema.String,
-  methodologySource: Schema.optional(Schema.String),
+  methodologySource: Schema.String.annotate({
+    description: "REQUIRED: the methodology pattern, skill checklist, or HackTricks section this hypothesis comes from — grounding that stops familiar-only guessing. Min 10 chars.",
+  }),
   expectedPositiveSignal: Schema.String.annotate({
     description: "What a CONFIRMED result would actually look like — specific and observable. Pre-registered before testing to stop post-hoc rationalization.",
   }),
@@ -52,8 +54,20 @@ export const HypothesisProposeTool = Tool.define<typeof Parameters, Metadata, ne
             throw new Error("expectedNegativeSignal must be >= 15 chars — say what ruling out looks like")
           if (params.rationale.trim().length < 20)
             throw new Error("rationale must be >= 20 chars — cite methodology pattern, not a guess")
+          if (!params.methodologySource || params.methodologySource.trim().length < 10)
+            throw new Error("methodologySource is REQUIRED (>= 10 chars) — every hypothesis must ground in a methodology pattern, skill, or HackTricks section")
           const hypothesisId = crypto.randomUUID()
           const attachField = params.attachToKeyField ?? "id"
+          // Attach target must exist — otherwise this hypothesis orphans and
+          // silently never counts toward any endpoint's coverage.
+          const attachCheck = yield* runReadEffect(
+            `MATCH (a:${params.attachToLabel} {${attachField}: $attachToKey}) RETURN a LIMIT 1`,
+            { attachToKey: params.attachToKey },
+          )
+          if (!attachCheck.length)
+            throw new Error(
+              `Attach target not in graph: ${params.attachToLabel} ${attachField}=${params.attachToKey} — recon has not logged it (or the key is wrong). Log it first, then propose.`,
+            )
           yield* runWriteEffect(
             `MERGE (h:Hypothesis {id: $hypothesisId}) SET h.vuln_class = $vulnClass, h.rationale = $rationale, h.methodology_source = $methodologySource, h.expected_positive_signal = $expectedPositive, h.expected_negative_signal = $expectedNegative, h.status = 'open', h.program_id = $programId, h.created_at = timestamp() RETURN h`,
             {

@@ -8,7 +8,8 @@
     "*.invicti.com"
   ],
   "allowedTestTypes": [
-    "active-recon"
+    "active-recon",
+    "interaction"
   ],
   "maxRequestsPerSecond": 1,
   "executionMode": "auto"

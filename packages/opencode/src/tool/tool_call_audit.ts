@@ -12,7 +12,7 @@ let db: Database | null = null
 function getDb(): Database {
   if (!db) {
     db = new Database(DB_PATH)
-    db.exec(`
+    db.run(`
       CREATE TABLE IF NOT EXISTS tool_calls (
         id TEXT PRIMARY KEY,
         program_id TEXT NOT NULL,
@@ -20,15 +20,26 @@ function getDb(): Database {
         target TEXT NOT NULL,
         hypothesis_id TEXT,
         called_at INTEGER NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS idx_target_time ON tool_calls(program_id, target, called_at);
-      CREATE INDEX IF NOT EXISTS idx_hyp_time ON tool_calls(program_id, hypothesis_id, called_at);
+      )
     `)
+    db.run(`CREATE INDEX IF NOT EXISTS idx_target_time ON tool_calls(program_id, target, called_at)`)
+    db.run(`CREATE INDEX IF NOT EXISTS idx_hyp_time ON tool_calls(program_id, hypothesis_id, called_at)`)
+    db.run(`
+      CREATE TABLE IF NOT EXISTS scope_deviations (
+        id TEXT PRIMARY KEY,
+        program_id TEXT NOT NULL,
+        tool_name TEXT NOT NULL,
+        target TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        recorded_at INTEGER NOT NULL
+      )
+    `)
+    db.run(`CREATE INDEX IF NOT EXISTS idx_dev_time ON scope_deviations(program_id, recorded_at)`)
   }
   return db
 }
 
-function hostOf(target: string): string {
+export function hostOf(target: string): string {
   try {
     return new URL(target.includes("://") ? target : `https://${target}`).hostname.toLowerCase()
   } catch {
@@ -50,6 +61,49 @@ export interface MatchingCall {
   id: string
   toolName: string
   calledAt: number
+}
+
+// Scope deviations are OBSERVED, never blocking: when a live-target tool
+// runs against something outside the loaded scope (or with no scope
+// loaded), it proceeds — and records the deviation here so the operator
+// can review exactly what went where. Query via tool_call_audit_get.
+export function noteScopeDeviation(programId: string, toolName: string, target: string, reason: string): string {
+  const id = crypto.randomUUID()
+  getDb()
+    .prepare(
+      `INSERT INTO scope_deviations (id, program_id, tool_name, target, reason, recorded_at) VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .run(id, programId, toolName, target, reason, Date.now())
+  return id
+}
+
+export interface ScopeDeviation {
+  id: string
+  programId: string
+  toolName: string
+  target: string
+  reason: string
+  recordedAt: number
+}
+
+export function recentDeviations(
+  programId: string,
+  limit = 20,
+): Array<ScopeDeviation> {
+  const rows = getDb()
+    .prepare(
+      `SELECT id, program_id, tool_name, target, reason, recorded_at FROM scope_deviations
+       WHERE program_id = ? ORDER BY recorded_at DESC LIMIT ?`,
+    )
+    .all(programId, limit)
+  return (rows as Array<Record<string, unknown>>).map((r) => ({
+    id: String(r["id"]),
+    programId: String(r["program_id"]),
+    toolName: String(r["tool_name"]),
+    target: String(r["target"]),
+    reason: String(r["reason"]),
+    recordedAt: Number(r["recorded_at"]),
+  }))
 }
 
 // Debug helper for the tool_call_audit_get tool (read-only).

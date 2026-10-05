@@ -2,6 +2,7 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION from "./asset-progress.txt"
 import { runReadEffect, runWriteEffect } from "./graph-db"
+import { findMatchingToolCall, hostOf } from "./tool_call_audit"
 
 // Every number returned here is computed by querying the graph directly —
 // nothing is self-reported by the model. That is the structural fix for
@@ -92,7 +93,7 @@ export const AssetProgressGetTool = Tool.define<typeof ProgressGetParameters, { 
             qp,
           )
           const testedRows = yield* runReadEffect(
-            `MATCH (a:Asset {id: $assetKey})-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(:Hypothesis)-[:TESTED_BY]->(:TestExecution) RETURN count(DISTINCT e) AS tested`,
+            `MATCH (a:Asset {id: $assetKey})-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(h:Hypothesis)-[:TESTED_BY]->(t:TestExecution) AND t.outcome IN ['confirmed', 'ruled_out'] RETURN count(DISTINCT e) AS tested`,
             qp,
           )
           const blockedRows = yield* runReadEffect(
@@ -146,6 +147,19 @@ export const AssetMarkBlockerTool = Tool.define<typeof MarkBlockerParameters, { 
             throw new Error("reason must be >= 10 chars — say what is actually unavailable")
           if (params.attemptedWorkaround.trim().length < 10)
             throw new Error("attemptedWorkaround must be >= 10 chars — record what was tried, not a guess")
+          const epRows = yield* runReadEffect(`MATCH (e:Endpoint {id: $key}) RETURN e.program_id AS programId`, {
+            key: params.endpointKey,
+          })
+          if (!epRows.length)
+            throw new Error(`Endpoint ${params.endpointKey} is not in the graph — recon has not logged it; cannot block what was never found`)
+          const epProgram = String((epRows[0] as Record<string, unknown>)["programId"] ?? "")
+          const attempt = epProgram
+            ? findMatchingToolCall(epProgram, hostOf(params.endpointKey), undefined, 60)
+            : null
+          if (!attempt)
+            throw new Error(
+              `No evidence anything was actually tried against ${params.endpointKey} (no tool call in the last 60 min, not even recon) — run the attempt first (signup flow, auth probe, deeper recon), then mark blocked with what happened.`,
+            )
           yield* runWriteEffect(
             `MATCH (e:Endpoint {id: $endpointKey})
              SET e.blocked_reason = $reason, e.blocked_attempted_workaround = $attemptedWorkaround, e.blocked_at = timestamp()
@@ -185,7 +199,7 @@ export const AssetGetQueueTool = Tool.define<typeof GetQueueParameters, { queue:
             qp,
           )
           const testedRows = yield* runReadEffect(
-            `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(:Hypothesis)-[:TESTED_BY]->(:TestExecution) RETURN a.id AS asset, count(DISTINCT e) AS tested`,
+            `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(h:Hypothesis)-[:TESTED_BY]->(t:TestExecution) AND t.outcome IN ['confirmed', 'ruled_out'] RETURN a.id AS asset, count(DISTINCT e) AS tested`,
             qp,
           )
           const blockedRows = yield* runReadEffect(

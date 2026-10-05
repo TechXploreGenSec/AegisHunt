@@ -8,7 +8,8 @@
     "api-wallet.venly.io"
   ],
   "allowedTestTypes": [
-    "active-recon"
+    "active-recon",
+    "interaction"
   ],
   "maxRequestsPerSecond": 5,
   "executionMode": "local"

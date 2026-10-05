@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION from "./tool-call-audit-get.txt"
-import { recentToolCalls } from "./tool_call_audit"
+import { recentToolCalls, recentDeviations } from "./tool_call_audit"
 
 export const Parameters = Schema.Struct({
   programId: Schema.String,
@@ -25,9 +25,10 @@ export const ToolCallAuditGetTool = Tool.define<typeof Parameters, Metadata, nev
             Math.min(Math.max(Math.round(params.limit ?? 20), 1), 50),
             params.target,
           )
+          const deviations = params.target ? [] : recentDeviations(params.programId, 20)
           return {
-            title: `${rows.length} audit entries`,
-            output: JSON.stringify({ programId: params.programId, count: rows.length, rows }),
+            title: `${rows.length} audit entries, ${deviations.length} scope deviations`,
+            output: JSON.stringify({ programId: params.programId, count: rows.length, rows, deviations }),
             metadata: { rows },
           }
         }),

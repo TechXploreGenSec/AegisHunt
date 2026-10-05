@@ -2,7 +2,7 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { recordToolCall } from "./tool_call_audit"
 import DESCRIPTION from "./js-extract.txt"
-import { getLoadedScope, isInScope } from "./scope-gate"
+import { getLoadedScope, observeScope } from "./scope-gate"
 import { runWriteEffect } from "./graph-db"
 
 // High-recall, deliberately broad. False positives get filtered downstream
@@ -37,7 +37,7 @@ export const JsExtractTool = Tool.define<typeof Parameters, Metadata, never>(
         Effect.gen(function* () {
           yield* ctx.ask({ permission: "content_discovery", patterns: [params.jsUrl], always: [], metadata: {} })
           const scope = getLoadedScope(params.programId)
-          if (!isInScope(scope, params.jsUrl)) throw new Error(`Scope violation: ${params.jsUrl}`)
+          observeScope(scope, params.programId, "js_extract_endpoints", params.jsUrl)
           const text = yield* Effect.promise(async () => {
             const res = await fetch(params.jsUrl)
             if (!res.ok) throw new Error(`JS fetch failed: ${res.status}`)

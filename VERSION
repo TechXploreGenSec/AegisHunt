@@ -3,9 +3,9 @@ AegisHunt — autonomous bug-bounty harness (opencode fork)
 
 Version:    1.18.33  (OPENCODE_VERSION build stamp — binary reports this;
             the model/provider setup expects exactly this build)
-Harness:    r4 (post-restore: enforcement set, stock TUI)
+Harness:    r5/bb.3 (observe-not-block scope, breadth+honesty gates, startup self-check, external watchdog)
 Source:     custom opencode fork — native tools, agents, prompts, watchdog
-Repo tag:   v1.18.33-bb.1
+Repo tag:   v1.18.33-bb.3
 
 Contents:   opencode source, harness/{agents,skills,scopes,config,mcp-tools},
             .github/workflows/build.yml (stamped binary CI + releases)

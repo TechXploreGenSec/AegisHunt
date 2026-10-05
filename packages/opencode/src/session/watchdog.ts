@@ -61,7 +61,7 @@ const incompleteAssetsEffect = (programId: string) =>
     )
     if (!assetRows.length) return { total: 0, incomplete: [] as Array<{ asset: string; left: number }> }
     const testedRows = yield* runReadEffect(
-      `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(:Hypothesis)-[:TESTED_BY]->(:TestExecution) RETURN a.id AS asset, count(DISTINCT e) AS tested`,
+      `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(h:Hypothesis)-[:TESTED_BY]->(t:TestExecution) AND t.outcome IN ['confirmed', 'ruled_out'] RETURN a.id AS asset, count(DISTINCT e) AS tested`,
       qp,
     )
     const blockedRows = yield* runReadEffect(

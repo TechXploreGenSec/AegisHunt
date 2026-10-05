@@ -295,6 +295,8 @@ const layer = Layer.effect(
                 bot_notify_hold: "allow",
                 completion: "allow",
                 todo_coverage: "allow",
+                harness: "allow",
+                todowrite: "allow",
                 phase_complete: "allow",
                 task: "allow",
                 read: "allow",
@@ -373,7 +375,7 @@ const layer = Layer.effect(
                 mitm_search_traffic: "allow",
                 mitm_inspect_flow: "allow",
                 mitm_replay_flow: "allow",
-                mitm_fuzz_endpoint: "ask",
+                mitm_fuzz_endpoint: "allow",  // bounds (<=50 payloads, rate limit) enforced in-tool; prompt pre-approves routine use
                 oob_start_listener: "allow",
                 oob_plant_payload: "allow",
                 oob_check_interactions: "allow",

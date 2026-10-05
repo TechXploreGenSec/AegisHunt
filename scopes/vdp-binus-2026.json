@@ -1,0 +1,14 @@
+{
+  "programId": "vdp-binus-2026",
+  "inScope": [
+    "*.binus.ac.id",
+    "*.binus.edu"
+  ],
+  "outOfScope": [],
+  "allowedTestTypes": [
+    "active-recon",
+    "interaction"
+  ],
+  "maxRequestsPerSecond": 5,
+  "executionMode": "gh-runner"
+}

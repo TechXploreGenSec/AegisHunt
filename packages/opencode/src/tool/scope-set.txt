@@ -1,1 +1,1 @@
-Load scope for a program from pasted values. Validates, caches, and persists to the shared scope file so gh-runner reads the same file. Refuses empty inScope. Call this before any live-target tool.
+Load scope for a program from pasted values. Validates, caches, and persists to the shared scope file so gh-runner reads the same file. Empty inScope declares no boundary (unrestricted). Nothing is ever refused on scope grounds — deviations are logged for review.

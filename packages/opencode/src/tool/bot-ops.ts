@@ -21,16 +21,37 @@ function esc(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
-function notifyMessage(code: string, programId: string, question: string, blocking: boolean): string {
+// Structured MarkdownV2 notification: the non-blocking behavior is VISIBLE
+// in the message itself ("Continuing meanwhile" vs "Paused until this
+// resolves"), so a silent stop after notifying is spottable on a phone
+// skim — by the operator, and by the model re-reading its own output.
+function notifyMessage(
+  code: string,
+  programId: string,
+  question: string,
+  blocking: boolean,
+  continuingWith: string[],
+  stayingPaused: string[],
+): string {
   const lines = [
-    `${blocking ? "⛔ <b>APPROVAL NEEDED" : "❓ <b>INPUT NEEDED"}</b> <code>${code}</code>`,
-    `Program: <code>${esc(programId)}</code>`,
+    `${blocking ? "⛔ *APPROVAL NEEDED*" : "❓ *INPUT NEEDED*"} \`${code}\``,
+    `📋 ${escapeMdV2(programId)}`,
     ``,
-    esc(question),
+    escapeMdV2(question),
     ``,
-    `Reply with: <code>${code} &lt;your answer&gt;</code>`,
   ]
-  if (blocking) lines.push(`<i>Explicit yes required — silence keeps this thread paused.</i>`)
+  if (continuingWith.length > 0) {
+    lines.push(`🔄 *Continuing meanwhile:*`)
+    for (const item of continuingWith) lines.push(`• ${escapeMdV2(item)}`)
+    lines.push(``)
+  }
+  if (stayingPaused.length > 0) {
+    lines.push(`⏸ *Paused until this resolves:*`)
+    for (const item of stayingPaused) lines.push(`• ${escapeMdV2(item)}`)
+    lines.push(``)
+  }
+  if (blocking) lines.push(`⚠️ Explicit yes required — silence keeps this thread paused\\.`, ``)
+  lines.push(`↩️ Reply \`${code} <answer>\` whenever you have time — no rush, work continues\\.`)
   return lines.join("\n")
 }
 
@@ -74,6 +95,12 @@ export const NotifyParameters = Schema.Struct({
   programId: Schema.String,
   question: Schema.String,
   requiresExplicitApproval: Schema.optional(Schema.Boolean),
+  continuingWith: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+    description: "Surfaces/vectors proceeding in parallel while this waits — shown under 'Continuing meanwhile'",
+  }),
+  stayingPaused: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+    description: "What genuinely cannot proceed until this resolves — shown under 'Paused until this resolves'",
+  }),
   botName: Schema.optional(
     Schema.Literals(["bot-approve", "bot-ask-input", "bot-general", "bot-report"]),
   ),
@@ -93,7 +120,15 @@ export const BotNotifyTool = Tool.define<typeof NotifyParameters, NotifyMeta, ne
           const blocking = params.requiresExplicitApproval ?? false
           yield* telegramEffect(
             params.botName ?? "bot-ask-input",
-            notifyMessage(c, params.programId, params.question, blocking),
+            notifyMessage(
+              c,
+              params.programId,
+              params.question,
+              blocking,
+              params.continuingWith ?? [],
+              params.stayingPaused ?? [],
+            ),
+            "MarkdownV2",
           )
           const client = yield* supabaseEffect()
           yield* Effect.promise(() =>
@@ -203,7 +238,7 @@ export const BotHoldTool = Tool.define<typeof HoldParameters, HoldMeta, never>(
             qp,
           )
           const testedRows = yield* runReadEffect(
-            `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(:Hypothesis)-[:TESTED_BY]->(:TestExecution) RETURN a.id AS asset, count(DISTINCT e) AS tested`,
+            `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(h:Hypothesis)-[:TESTED_BY]->(t:TestExecution) AND t.outcome IN ['confirmed', 'ruled_out'] RETURN a.id AS asset, count(DISTINCT e) AS tested`,
             qp,
           )
           const blockedRows = yield* runReadEffect(

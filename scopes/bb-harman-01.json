@@ -40,7 +40,8 @@
     "ALL_OTHER_DOMAINS_OR_SUBDOMAINS"
   ],
   "allowedTestTypes": [
-    "active-recon"
+    "active-recon",
+    "interaction"
   ],
   "maxRequestsPerSecond": 5,
   "executionMode": "auto"

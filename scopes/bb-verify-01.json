@@ -4,7 +4,9 @@
     "example.com"
   ],
   "outOfScope": [],
-  "allowedTestTypes": [],
+  "allowedTestTypes": [
+    "interaction"
+  ],
   "maxRequestsPerSecond": 5,
   "executionMode": "local"
 }

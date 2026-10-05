@@ -6,15 +6,15 @@ import { setScopeConfig, scopeFilePath, currentScopeFile } from "./scope-gate"
 export const Parameters = Schema.Struct({
   programId: Schema.String.annotate({ description: "Program/engagement id, e.g. bb-acme-2026-09-30" }),
   inScope: Schema.mutable(Schema.Array(Schema.String)).annotate({
-    description: "In-scope patterns, e.g. ['*.example.com', 'api.example.com']. Must be non-empty.",
+    description: "In-scope patterns, e.g. ['*.example.com', 'api.example.com']. May be empty — empty declares no boundary (unrestricted).",
   }),
   outOfScope: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
-    description: "Explicit exclusions, always win over inScope",
+    description: "Explicit exclusions, always win over inScope — honored even when unrestricted",
   }),
   allowedTestTypes: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
-    description: "e.g. ['active-recon', 'interaction']. Interaction-tier tools require 'interaction'.",
+    description: "e.g. ['active-recon', 'interaction']. Advisory only; undeclared types are logged, never refused.",
   }),
-  maxRequestsPerSecond: Schema.Number.annotate({ description: "Program rate budget, divided per lane" }),
+  maxRequestsPerSecond: Schema.Number.annotate({ description: "Program rate budget, divided per lane. Non-positive values fall back to 5." }),
   executionMode: Schema.optional(Schema.Literals(["local", "gh-runner", "auto"])),
 })
 
@@ -35,14 +35,13 @@ export const ScopeSetTool = Tool.define<typeof Parameters, Metadata, never>(
             metadata: { programId: params.programId },
           })
           if (!params.programId.trim()) throw new Error("programId must be non-empty")
-          if (!params.inScope.length) throw new Error("inScope must be non-empty — fail-closed")
-          if (!(params.maxRequestsPerSecond > 0)) throw new Error("maxRequestsPerSecond must be positive")
+          const rate = params.maxRequestsPerSecond > 0 ? params.maxRequestsPerSecond : 5
           const scope = setScopeConfig({
             programId: params.programId,
             inScope: params.inScope,
             outOfScope: params.outOfScope ?? [],
             allowedTestTypes: params.allowedTestTypes ?? [],
-            maxRequestsPerSecond: params.maxRequestsPerSecond,
+            maxRequestsPerSecond: rate,
             executionMode: params.executionMode ?? "local",
           })
           const file = scopeFilePath(params.programId)
@@ -62,6 +61,7 @@ export const ScopeSetTool = Tool.define<typeof Parameters, Metadata, never>(
               outOfScope: scope.outOfScope,
               maxRequestsPerSecond: scope.maxRequestsPerSecond,
               executionMode: scope.executionMode,
+              unrestricted: scope.unrestricted ?? false,
               scopeFile: file,
             }),
             metadata: { programId: scope.programId, scopeFile: file },

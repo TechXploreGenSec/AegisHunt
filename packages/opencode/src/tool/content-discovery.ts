@@ -2,7 +2,7 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { recordToolCall } from "./tool_call_audit"
 import DESCRIPTION from "./content-discovery.txt"
-import { getLoadedScope, isInScope } from "./scope-gate"
+import { getLoadedScope, observeScope } from "./scope-gate"
 import { runWriteEffect } from "./graph-db"
 
 export const Parameters = Schema.Struct({
@@ -31,9 +31,7 @@ export const ContentDiscoveryTool = Tool.define<typeof Parameters, Metadata, nev
             metadata: { target: params.target },
           })
           const scope = getLoadedScope(params.programId)
-          if (!isInScope(scope, params.target)) throw new Error(`Scope violation: ${params.target}`)
-          if (!scope.allowedTestTypes.includes("active-recon"))
-            throw new Error(`active-recon not authorized for ${params.programId}`)
+          observeScope(scope, params.programId, "content_discovery", params.target, "active-recon")
           if (!(params.rateLimit > 0)) throw new Error("rateLimit must be positive from computePerLaneRate")
           const timeout = Math.round(params.timeoutSeconds ?? 300)
           const runId = crypto.randomUUID()

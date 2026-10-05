@@ -2,7 +2,7 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { recordToolCall } from "./tool_call_audit"
 import DESCRIPTION from "./mitm-ops.txt"
-import { getLoadedScope, isInScope } from "./scope-gate"
+import { getLoadedScope, observeScope } from "./scope-gate"
 
 const DB_PATH = process.env.MITM_TRAFFIC_DB_PATH ?? "./mitm_mcp_traffic.db"
 
@@ -213,9 +213,7 @@ export const MitmReplayFlowTool = Tool.define<typeof ReplayParameters, ReplayMet
           )
           if (!flow) throw new Error(`Flow ${params.flowId} not found`)
           const url = String(flow["url"] ?? "")
-          if (!isInScope(scope, url)) throw new Error(`Scope violation: ${url}`)
-          if (!scope.allowedTestTypes.includes("interaction"))
-            throw new Error(`interaction not authorized for ${params.programId}`)
+          observeScope(scope, params.programId, "mitm_replay_flow", url, "interaction")
           const headers = { ...JSON.parse(String(flow["headers"] ?? "{}")), ...((params.modifiedHeaders ?? {}) as Record<string, string>) }
           const res = yield* Effect.promise(() =>
             fetch(url, {
@@ -263,9 +261,7 @@ export const MitmFuzzEndpointTool = Tool.define<typeof FuzzParameters, FuzzMeta,
           )
           if (!flow) throw new Error(`Flow ${params.baseFlowId} not found`)
           const base = String(flow["url"] ?? "")
-          if (!isInScope(scope, base)) throw new Error(`Scope violation: ${base}`)
-          if (!scope.allowedTestTypes.includes("interaction"))
-            throw new Error(`interaction not authorized for ${params.programId}`)
+          observeScope(scope, params.programId, "mitm_fuzz_endpoint", base, "interaction")
           const delayMs = 1000 / params.rateLimit
           const baseline = String(flow["body"] ?? "").length
           const results: Array<{ payload: string; status: number; lengthDelta: number }> = []

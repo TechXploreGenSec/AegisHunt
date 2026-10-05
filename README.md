@@ -27,7 +27,8 @@ harness/config/                 opencode.json + .env.bb.example (SECRETS REDACTE
                                 see harness/config/SECRETS.md), models.env, cli.json
 harness/mcp-tools/              external MCP servers (gh-runner, memory, telegram
                                 bots, report, poc-capture, man) + install.sh
-harness/scripts/fetch-methodology.sh  first-run bootstrap: HackTricks src (sparse)
+harness/scripts/fetch-methodology.sh  first-run bootstrap
+session_watchdog.sh  external polling watchdog (see `harness/scripts/`): HackTricks src (sparse)
                                 + community skills into ~/.config/opencode/skills/
 ```
 
@@ -41,6 +42,12 @@ harness/scripts/fetch-methodology.sh  first-run bootstrap: HackTricks src (spars
 | Declaring "done" early | `endpoint_mark_assessed` refuses unless coverage score is complete |
 | Stopping with work left | `bot_notify_hold` refuses unless queue empty + asset complete; idle watchdog resumes otherwise |
 | 5-item summary plans | `asset_generate_test_plan` → bulk `todowrite` → `todo_coverage_check` gate |
+| Narrow/familiar-only hypotheses | `hypothesis_coverage_check` (every pair needs one) + required `methodologySource` + attach-target must exist |
+| Completed-without-work todos | `todo_honesty_check` (completed todos vs graph outcomes) before phase close |
+| Blocker abuse | `asset_mark_blocker` needs the endpoint in-graph + audit evidence of an attempt |
+| Inconclusive counted as done | only `confirmed`/`ruled_out` count toward tested everywhere |
+| Scope refusals blocking runs | observe-not-block: deviations logged (`scope_deviations`), never thrown; `scope_set` accepts empty |
+| Broken layer at startup | `harness_self_check` on fresh engagements (agents, perms, skills, methodology, graph, audit, env) |
 
 ## Get a working binary (CI)
 

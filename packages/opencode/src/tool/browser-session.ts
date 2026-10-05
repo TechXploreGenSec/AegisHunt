@@ -2,7 +2,7 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { recordToolCall } from "./tool_call_audit"
 import DESCRIPTION from "./browser-session.txt"
-import { getLoadedScope, isInScope } from "./scope-gate"
+import { getLoadedScope, observeScope } from "./scope-gate"
 import type { Browser, Page } from "playwright"
 
 const REALISTIC_UA =
@@ -90,7 +90,7 @@ function getSessionEffect(programId: string, headless: boolean, channel: Channel
 function liveCheck(programId: string, target: string) {
   return Effect.sync(() => {
     const scope = getLoadedScope(programId)
-    if (target && !isInScope(scope, target)) throw new Error(`Scope violation: ${target}`)
+    if (target) observeScope(scope, programId, "browser", target)
     return scope
   })
 }
@@ -194,8 +194,7 @@ export const BrowserFillAndSubmitTool = Tool.define<typeof FillParameters, FillM
           const mode = resolveMode(params)
           const { entry } = yield* getSessionEffect(params.programId, mode.headless, mode.channel)
           const current = entry.page.url()
-          if (current && current !== "about:blank" && !isInScope(scope, current))
-            throw new Error(`Scope violation: ${current}`)
+          if (current && current !== "about:blank") observeScope(scope, params.programId, "browser_fill_and_submit", current)
           for (const f of params.fields) {
             yield* Effect.promise(() => entry.page.fill(f.selector, f.value))
           }

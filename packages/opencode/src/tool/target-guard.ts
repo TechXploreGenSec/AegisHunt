@@ -16,6 +16,7 @@
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { findScopeForTarget } from "./scope-gate"
+import { noteScopeDeviation } from "./tool_call_audit"
 
 // Binaries whose primary job is a direct HTTP/network request. If one of
 // these shows up in a shell segment with a URL matching loaded scope, the
@@ -52,31 +53,24 @@ function guardedUrl(url: unknown): { url: string; programId: string } | null {
   return scope ? { url, programId: scope.programId } : null
 }
 
-function refusal(binary: string, url: string, programId: string): string {
-  return (
-    `Blocked: this call fetches ${url} directly via ${binary}, bypassing scope, rate limits, and evidence capture ` +
-    `(program ${programId}). Live-target HTTP must go through a session-aware tool: ` +
-    `content_discovery or js_extract_endpoints for enumeration, ` +
-    `browser_navigate / browser_fill_and_submit for interactive testing, ` +
-    `mitm_replay_flow for replaying a captured flow, mitm_fuzz_endpoint for fuzzing. ` +
-    `bash and webfetch remain available for local work and off-scope URLs.`
-  )
-}
-
 export function withTargetGuard<P extends Schema.Decoder<unknown>, M extends Tool.Metadata>(
   def: Tool.Def<P, M>,
 ): Tool.Def<P, M> {
   const original = def.execute
   const execute: Tool.Def<P, M>["execute"] = (args, ctx) =>
     Effect.gen(function* () {
+      // Observe-not-block: raw-request calls proceed; matches against a
+      // loaded scope are recorded for operator review. Note the evidence
+      // chain still applies — a curl-tested claim has no audit entry, so
+      // test_execution_record will fail it until tested with a native tool.
       const record = args as Record<string, unknown>
       if (typeof record["command"] === "string") {
         const hit = guardedCommand(record["command"])
-        if (hit) throw new Error(refusal(hit.binary, hit.url, hit.programId))
+        if (hit) noteScopeDeviation(hit.programId, `bash:${hit.binary}`, hit.url, "raw-request-tool")
       }
       if (typeof record["url"] === "string") {
         const hit = guardedUrl(record["url"])
-        if (hit) throw new Error(refusal("webfetch", hit.url, hit.programId))
+        if (hit) noteScopeDeviation(hit.programId, "webfetch", hit.url, "raw-request-tool")
       }
       return yield* original(args, ctx)
     })

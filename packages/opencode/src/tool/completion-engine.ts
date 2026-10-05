@@ -52,7 +52,7 @@ export function applicableVulnClasses(ep: EndpointProps): VulnClass[] {
   return [...classes]
 }
 
-function rowProps(row: Record<string, unknown>): EndpointProps {
+export function rowProps(row: Record<string, unknown>): EndpointProps {
   const e = (row["e"] ?? {}) as { properties?: Record<string, unknown> }
   const p = (e.properties ?? row) as Record<string, unknown>
   return {
@@ -70,7 +70,7 @@ const computeScoreEffect = (endpointKey: string) =>
     if (!epRows[0]) throw new Error(`Endpoint ${endpointKey} not found — recon may not have logged it yet`)
     const applicable = applicableVulnClasses(rowProps(epRows[0] as Record<string, unknown>))
     const testedRows = yield* runReadEffect(
-      `MATCH (e:Endpoint {id: $key})-[:SUGGESTS]->(h:Hypothesis)-[:TESTED_BY]->(:TestExecution) RETURN DISTINCT h.vuln_class AS vulnClass`,
+      `MATCH (e:Endpoint {id: $key})-[:SUGGESTS]->(h:Hypothesis)-[:TESTED_BY]->(t:TestExecution) WHERE t.outcome IN ['confirmed', 'ruled_out'] RETURN DISTINCT h.vuln_class AS vulnClass`,
       { key: endpointKey },
     )
     const testedClasses = [...new Set(testedRows.map((r) => String((r as Record<string, unknown>)["vulnClass"])))]
@@ -170,5 +170,56 @@ export const AssetGenerateTestPlanTool = Tool.define<typeof GeneratePlanParamete
           }
         }),
     } satisfies Tool.DefWithoutID<typeof GeneratePlanParameters, { totalPlanItems: unknown }>
+  }),
+)
+
+export const HypCoverageParameters = Schema.Struct({ assetKey: Schema.String })
+
+export const HypothesisCoverageCheckTool = Tool.define<typeof HypCoverageParameters, { sufficient: unknown }, never>(
+  "hypothesis_coverage_check",
+  Effect.gen(function* () {
+    return {
+      description: DESCRIPTION,
+      parameters: HypCoverageParameters,
+      execute: (params: Schema.Schema.Type<typeof HypCoverageParameters>, ctx: Tool.Context<{ sufficient: unknown }>) =>
+        Effect.gen(function* () {
+          yield* ctx.ask({ permission: "completion", patterns: ["*"], always: ["*"], metadata: {} })
+          const rows = yield* runReadEffect(
+            `MATCH (a:Asset {id: $assetKey})-[:EXPOSES]->(e:Endpoint)
+             OPTIONAL MATCH (e)-[:SUGGESTS]->(h:Hypothesis)
+             OPTIONAL MATCH (e)-[:HAS_PARAMETER]->(p:Parameter)-[:SUGGESTS]->(h2:Hypothesis)
+             RETURN e, collect(DISTINCT h.vuln_class) AS direct, collect(DISTINCT h2.vuln_class) AS viaParam`,
+            { assetKey: params.assetKey },
+          )
+          if (!rows.length)
+            throw new Error(`No endpoints for asset ${params.assetKey} — recon has not written any yet`)
+          const missing: Array<{ endpointKey: string; vulnClass: string }> = []
+          let total = 0
+          for (const row of rows) {
+            const props = rowProps(row as Record<string, unknown>)
+            const have = new Set<string>([
+              ...((row as Record<string, unknown>)["direct"] as string[] ?? []),
+              ...((row as Record<string, unknown>)["viaParam"] as string[] ?? []),
+            ])
+            for (const vulnClass of applicableVulnClasses(props)) {
+              total++
+              if (!have.has(vulnClass)) missing.push({ endpointKey: props.url || params.assetKey, vulnClass })
+            }
+          }
+          if (missing.length > 0) {
+            const shown = missing.slice(0, 12).map((m) => `${m.vulnClass}: ${m.endpointKey}`).join("; ")
+            const more = missing.length > 12 ? ` (+${missing.length - 12} more)` : ""
+            throw new Error(
+              `Hypothesis coverage short: ${missing.length}/${total} (endpoint, class) pairs have no hypothesis: ${shown}${more}. ` +
+                `Propose one per missing pair — every severity, every class, including unfamiliar vectors — then retry.`,
+            )
+          }
+          return {
+            title: `hypotheses cover ${total} pairs`,
+            output: JSON.stringify({ assetKey: params.assetKey, totalPairs: total, missing: 0, sufficient: true }),
+            metadata: { sufficient: true },
+          }
+        }),
+    } satisfies Tool.DefWithoutID<typeof HypCoverageParameters, { sufficient: unknown }>
   }),
 )
