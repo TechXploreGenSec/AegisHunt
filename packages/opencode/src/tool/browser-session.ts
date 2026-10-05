@@ -2,6 +2,9 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { recordToolCall } from "./tool_call_audit"
 import DESCRIPTION from "./browser-session.txt"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { mkdir, readFile } from "node:fs/promises"
 import { getLoadedScope, observeScope } from "./scope-gate"
 import type { Browser, Page } from "playwright"
 
@@ -300,6 +303,102 @@ export const BrowserPerfTimingTool = Tool.define<typeof PerfParameters, PerfMeta
           }
         }),
     } satisfies Tool.DefWithoutID<typeof PerfParameters, PerfMeta>
+  }),
+)
+
+
+export const PageContentParameters = Schema.Struct({
+  programId: Schema.String,
+  maxChars: Schema.optional(Schema.Number.annotate({ description: "Max HTML chars returned, default 30000" })),
+  ...ModeMixin,
+})
+type PageContentMeta = { url: unknown; truncated: unknown }
+
+export const BrowserPageContentTool = Tool.define<typeof PageContentParameters, PageContentMeta, never>(
+  "browser_get_page_content",
+  Effect.gen(function* () {
+    return {
+      description: DESCRIPTION,
+      parameters: PageContentParameters,
+      execute: (params: Schema.Schema.Type<typeof PageContentParameters>, ctx: Tool.Context<PageContentMeta>) =>
+        Effect.gen(function* () {
+          yield* ctx.ask({ permission: "browser_navigate", patterns: ["*"], always: [], metadata: {} })
+          const mode = resolveMode(params)
+          const { entry } = yield* getSessionEffect(params.programId, mode.headless, mode.channel)
+          const url = entry.page.url()
+          if (url && url !== "about:blank") {
+            const scope = getLoadedScope(params.programId)
+            observeScope(scope, params.programId, "browser_get_page_content", url)
+          }
+          const html = yield* Effect.promise(() => entry.page.content())
+          const max = Math.min(Math.max(Math.round(params.maxChars ?? 30000), 1000), 200000)
+          const truncated = html.length > max
+          return {
+            title: `page content ${html.length} chars`,
+            output: JSON.stringify({ url, truncated, length: html.length, html: truncated ? html.slice(0, max) : html }),
+            metadata: { url, truncated },
+          }
+        }),
+    } satisfies Tool.DefWithoutID<typeof PageContentParameters, PageContentMeta>
+  }),
+)
+
+export const ClickDownloadParameters = Schema.Struct({
+  programId: Schema.String,
+  selector: Schema.String.annotate({ description: "CSS selector of the link/button that triggers the download" }),
+  timeoutSeconds: Schema.optional(Schema.Number.annotate({ description: "Wait for download event, default 20" })),
+  ...ModeMixin,
+})
+type ClickDownloadMeta = { savedPath: unknown; size: unknown }
+
+export const BrowserClickDownloadTool = Tool.define<typeof ClickDownloadParameters, ClickDownloadMeta, never>(
+  "browser_click_and_download",
+  Effect.gen(function* () {
+    return {
+      description: DESCRIPTION,
+      parameters: ClickDownloadParameters,
+      execute: (params: Schema.Schema.Type<typeof ClickDownloadParameters>, ctx: Tool.Context<ClickDownloadMeta>) =>
+        Effect.gen(function* () {
+          yield* ctx.ask({ permission: "browser_navigate", patterns: ["*"], always: [], metadata: {} })
+          const scope = getLoadedScope(params.programId)
+          const mode = resolveMode(params)
+          const { entry } = yield* getSessionEffect(params.programId, mode.headless, mode.channel)
+          const url = entry.page.url()
+          if (url && url !== "about:blank") observeScope(scope, params.programId, "browser_click_and_download", url)
+          const timeout = Math.min(Math.max((params.timeoutSeconds ?? 20) * 1000, 5000), 60000)
+          const dir = join(tmpdir(), `opencode-dl-${params.programId}`)
+          yield* Effect.promise(() => mkdir(dir, { recursive: true }))
+          const [download] = yield* Effect.promise(() =>
+            Promise.all([
+              entry.page.waitForEvent("download", { timeout }).catch((e: unknown) => {
+                throw new Error(`no download started within timeout: ${e instanceof Error ? e.message : String(e)}`)
+              }),
+              entry.page.click(params.selector),
+            ]),
+          )
+          const suggested = download.suggestedFilename()
+          const savedPath = join(dir, `${Date.now()}-${suggested}`)
+          yield* Effect.promise(() => download.saveAs(savedPath))
+          const buf = yield* Effect.promise(() => readFile(savedPath))
+          let preview = ""
+          try {
+            preview = buf.toString("utf8").slice(0, 4000)
+          } catch {
+            preview = "<binary>"
+          }
+          return {
+            title: `downloaded ${suggested} (${buf.length} bytes)`,
+            output: JSON.stringify({
+              savedPath,
+              fileName: suggested,
+              size: buf.length,
+              truncated: buf.length > 4000,
+              preview,
+            }),
+            metadata: { savedPath, size: buf.length },
+          }
+        }),
+    } satisfies Tool.DefWithoutID<typeof ClickDownloadParameters, ClickDownloadMeta>
   }),
 )
 

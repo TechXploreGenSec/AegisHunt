@@ -45,6 +45,8 @@ import {
   BrowserConsoleLogTool,
   BrowserPerfTimingTool,
   BrowserCloseSessionTool,
+  BrowserPageContentTool,
+  BrowserClickDownloadTool,
 } from "./browser-session"
 import {
   MitmStartProxyTool,
@@ -185,6 +187,8 @@ const layer = Layer.effect(
     const browserCon = yield* BrowserConsoleLogTool
     const browserPerf = yield* BrowserPerfTimingTool
     const browserClose = yield* BrowserCloseSessionTool
+    const browserContent = yield* BrowserPageContentTool
+    const browserDownload = yield* BrowserClickDownloadTool
     const mitmStart = yield* MitmStartProxyTool
     const mitmStop = yield* MitmStopProxyTool
     const mitmSummary = yield* MitmTrafficSummaryTool
@@ -350,6 +354,8 @@ const layer = Layer.effect(
           browserCon: Tool.init(browserCon),
           browserPerf: Tool.init(browserPerf),
           browserClose: Tool.init(browserClose),
+          browserContent: Tool.init(browserContent),
+          browserDownload: Tool.init(browserDownload),
           mitmStart: Tool.init(mitmStart),
           mitmStop: Tool.init(mitmStop),
           mitmSummary: Tool.init(mitmSummary),
@@ -423,6 +429,8 @@ const layer = Layer.effect(
             tool.browserCon,
             tool.browserPerf,
             tool.browserClose,
+            tool.browserContent,
+            tool.browserDownload,
             tool.mitmStart,
             tool.mitmStop,
             tool.mitmSummary,
