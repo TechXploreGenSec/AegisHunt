@@ -1,1 +1,214 @@
-{"$schema": "https://opencode.ai", "default_agent": "coordinator", "permission": {"question": "deny", "plan_enter": "deny", "plan_exit": "deny", "doom_loop": "ask", "read": "allow", "edit": "allow", "bash": "allow", "glob": "allow", "grep": "allow", "task": "allow", "todowrite": "allow", "skill": "allow", "webfetch": "allow", "websearch": "allow", "external_directory": {"/tmp/opencode/*": "allow", "/home/Godfather_Cyb3r/.local/share/opencode/tool-output/*": "allow", "/home/Godfather_Cyb3r/.config/opencode/skills/bug_bounty_workflow/*": "allow"}}, "model": "justwoker/claude-opus-4-8", "mcp": {"playwright": {"type": "local", "command": ["npx", "-y", "@playwright/mcp@latest"], "enabled": true}, "mitmproxy": {"type": "local", "command": ["mitmproxy-mcp"], "enabled": true}, "chrome-devtools": {"type": "local", "command": ["npx", "-y", "chrome-devtools-mcp@latest"], "args": ["--browser-url=http://127.0.0.1:9222"], "enabled": true}, "bot-report": {"type": "local", "command": ["bash", "-c", "TELEGRAM_BOT_TOKEN=\"REPLACE_ME__see_SECRETS.md\" TELEGRAM_CHAT_ID=\"1334392401\" node /home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/telegram-bot-mcp-community/dist/index.js"], "enabled": true}, "bot-general": {"type": "local", "command": ["bash", "-c", "TELEGRAM_BOT_TOKEN=\"REPLACE_ME__see_SECRETS.md\" TELEGRAM_CHAT_ID=\"1334392401\" node /home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/telegram-bot-mcp-community/dist/index.js"], "enabled": true}, "bot-approve": {"type": "local", "command": ["bash", "-c", "TELEGRAM_BOT_TOKEN=\"REPLACE_ME__see_SECRETS.md\" TELEGRAM_CHAT_ID=\"1334392401\" node /home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/telegram-bot-mcp-community/dist/index.js"], "enabled": true}, "bot-ask-input": {"type": "local", "command": ["bash", "-c", "TELEGRAM_BOT_TOKEN=\"REPLACE_ME__see_SECRETS.md\" TELEGRAM_CHAT_ID=\"1334392401\" node /home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/telegram-bot-mcp-community/dist/index.js"], "enabled": true}, "gh-runner": {"type": "local", "command": ["node", "--enable-source-maps", "/home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/action_orchestrator/mcp-server/dist/index.mjs"], "cwd": "$HOME/docker_bundled_agent/linux/mcp-tools/action_orchestrator/mcp-server", "enabled": true, "environment": {"MCP_TRANSPORT": "stdio", "GITHUB_TOKEN": "REPLACE_ME__see_SECRETS.md", "GITHUB_OWNER": "Godf-Cyb3r-1", "GITHUB_REPO": "TASK_RUNNER", "GITHUB_DEFAULT_BRANCH": "main", "MAX_JOBS_PER_PLAN": "20", "MAX_CONCURRENT_RUNS": "5", "AUDIT_LOG_PATH": "$HOME/docker_bundled_agent/linux/mcp-tools/action_orchestrator/mcp-server/audit.log", "SCOPE_CONFIG_PATH": "$HOME/opencode-source/scopes/current.json"}, "codemode": false}, "memory": {"type": "local", "command": ["node", "/home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/mcp-memory-server/dist/server.js"], "enabled": true, "environment": {"DATA_BACKEND": "supabase", "SUPABASE_URL": "https://mnpezjcwavddiaxabwnf.supabase.co", "SUPABASE_KEY": "REPLACE_ME__see_SECRETS.md.REPLACE_ME__see_SECRETS.md.qENJTt79bMbKVjJ4wVmA59VYhlJ3_5LeGs2gmt25vu0", "BLOB_BACKEND": "s3", "S3_BUCKET": "mcp-memory-bucket", "S3_REGION": "auto", "S3_ACCESS_KEY_ID": "REPLACE_ME__see_SECRETS.md", "S3_SECRET_ACCESS_KEY": "REPLACE_ME__see_SECRETS.md", "S3_ENDPOINT": "https://gateway.storjshare.io"}}, "man-mcp-server": {"type": "local", "command": ["python3", "/home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/man-mcp-server/server/main.py"], "enabled": true}, "bugbounty-report-mcp": {"type": "local", "command": ["node", "/home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/bugbounty-report-mcp/dist/server.js"], "enabled": true}, "poc-capture-mcp": {"type": "local", "command": ["node", "--enable-source-maps", "/home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/api-server/dist/mcp.mjs"], "cwd": "$HOME/docker_bundled_agent/linux/mcp-tools/api-server", "enabled": true, "environment": {"POC_OUTPUT_DIR": "/tmp/opencode/"}}, "temp-mail-mcp-server": {"type": "local", "command": ["npx", "-y", "@pragyanm/temp-mail-mcp-server@1.0.2"], "enabled": true}}, "provider": {"justwoker": {"npm": "@ai-sdk/anthropic", "name": "JustWoker", "options": {"baseURL": "https://api.justwoker.icu", "apiKey": "REPLACE_ME__see_SECRETS.md"}, "models": {"claude-opus-4-8": {"name": "Claude Opus 4.8"}}}, "apmix": {"npm": "@ai-sdk/openai-compatible", "name": "Apmix", "options": {"baseURL": "https://api.apmix.ai/v1", "apiKey": "REPLACE_ME__see_SECRETS.md"}, "models": {"claude-sonnet-4-6-free": {"name": "Claude Sonnet 4.6 (free)"}}}}, "subagent_depth": 2, "agent": {"coordinator": {"model": "apmix/claude-sonnet-4-6-free"}, "verification": {"model": "opencode/space-bunny-free"}, "recon": {"model": "opencode/space-bunny-free"}, "reporting": {"model": "opencode/space-bunny-free"}}}
+{
+ "$schema": "https://opencode.ai",
+ "default_agent": "coordinator",
+ "permission": {
+  "question": "deny",
+  "plan_enter": "deny",
+  "plan_exit": "deny",
+  "doom_loop": "ask",
+  "read": "allow",
+  "edit": "allow",
+  "bash": "allow",
+  "glob": "allow",
+  "grep": "allow",
+  "task": "allow",
+  "todowrite": "allow",
+  "skill": "allow",
+  "webfetch": "allow",
+  "websearch": "allow",
+  "external_directory": {
+   "/tmp/opencode/*": "allow",
+   "/home/Godfather_Cyb3r/.local/share/opencode/tool-output/*": "allow",
+   "/home/Godfather_Cyb3r/.config/opencode/skills/bug_bounty_workflow/*": "allow"
+  }
+ },
+ "model": "justwoker/claude-opus-4-8",
+ "mcp": {
+  "playwright": {
+   "type": "local",
+   "command": [
+    "npx",
+    "-y",
+    "@playwright/mcp@latest"
+   ],
+   "enabled": true
+  },
+  "mitmproxy": {
+   "type": "local",
+   "command": [
+    "mitmproxy-mcp"
+   ],
+   "enabled": true
+  },
+  "chrome-devtools": {
+   "type": "local",
+   "command": [
+    "npx",
+    "-y",
+    "chrome-devtools-mcp@latest"
+   ],
+   "args": [
+    "--browser-url=http://127.0.0.1:9222"
+   ],
+   "enabled": true
+  },
+  "bot-report": {
+   "type": "local",
+   "command": [
+    "bash",
+    "-c",
+    "TELEGRAM_BOT_TOKEN=\"REPLACE_ME__see_SECRETS.md\" TELEGRAM_CHAT_ID=\"1334392401\" node /home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/telegram-bot-mcp-community/dist/index.js"
+   ],
+   "enabled": true
+  },
+  "bot-general": {
+   "type": "local",
+   "command": [
+    "bash",
+    "-c",
+    "TELEGRAM_BOT_TOKEN=\"REPLACE_ME__see_SECRETS.md\" TELEGRAM_CHAT_ID=\"1334392401\" node /home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/telegram-bot-mcp-community/dist/index.js"
+   ],
+   "enabled": true
+  },
+  "bot-approve": {
+   "type": "local",
+   "command": [
+    "bash",
+    "-c",
+    "TELEGRAM_BOT_TOKEN=\"REPLACE_ME__see_SECRETS.md\" TELEGRAM_CHAT_ID=\"1334392401\" node /home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/telegram-bot-mcp-community/dist/index.js"
+   ],
+   "enabled": true
+  },
+  "bot-ask-input": {
+   "type": "local",
+   "command": [
+    "bash",
+    "-c",
+    "TELEGRAM_BOT_TOKEN=\"REPLACE_ME__see_SECRETS.md\" TELEGRAM_CHAT_ID=\"1334392401\" node /home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/telegram-bot-mcp-community/dist/index.js"
+   ],
+   "enabled": true
+  },
+  "gh-runner": {
+   "type": "local",
+   "command": [
+    "node",
+    "--enable-source-maps",
+    "/home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/action_orchestrator/mcp-server/dist/index.mjs"
+   ],
+   "cwd": "$HOME/docker_bundled_agent/linux/mcp-tools/action_orchestrator/mcp-server",
+   "enabled": true,
+   "environment": {
+    "MCP_TRANSPORT": "stdio",
+    "GITHUB_TOKEN": "REPLACE_ME__see_SECRETS.md",
+    "GITHUB_OWNER": "Godf-Cyb3r-1",
+    "GITHUB_REPO": "TASK_RUNNER",
+    "GITHUB_DEFAULT_BRANCH": "main",
+    "MAX_JOBS_PER_PLAN": "20",
+    "MAX_CONCURRENT_RUNS": "5",
+    "AUDIT_LOG_PATH": "$HOME/docker_bundled_agent/linux/mcp-tools/action_orchestrator/mcp-server/audit.log",
+    "SCOPE_CONFIG_PATH": "$HOME/opencode-source/scopes/current.json"
+   },
+   "codemode": false
+  },
+  "memory": {
+   "type": "local",
+   "command": [
+    "node",
+    "/home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/mcp-memory-server/dist/server.js"
+   ],
+   "enabled": true,
+   "environment": {
+    "DATA_BACKEND": "supabase",
+    "SUPABASE_URL": "https://mnpezjcwavddiaxabwnf.supabase.co",
+    "SUPABASE_KEY": "REPLACE_ME__see_SECRETS.md.REPLACE_ME__see_SECRETS.md.qENJTt79bMbKVjJ4wVmA59VYhlJ3_5LeGs2gmt25vu0",
+    "BLOB_BACKEND": "s3",
+    "S3_BUCKET": "mcp-memory-bucket",
+    "S3_REGION": "auto",
+    "S3_ACCESS_KEY_ID": "REPLACE_ME__see_SECRETS.md",
+    "S3_SECRET_ACCESS_KEY": "REPLACE_ME__see_SECRETS.md",
+    "S3_ENDPOINT": "https://gateway.storjshare.io"
+   }
+  },
+  "man-mcp-server": {
+   "type": "local",
+   "command": [
+    "python3",
+    "/home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/man-mcp-server/server/main.py"
+   ],
+   "enabled": true
+  },
+  "bugbounty-report-mcp": {
+   "type": "local",
+   "command": [
+    "node",
+    "/home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/bugbounty-report-mcp/dist/server.js"
+   ],
+   "enabled": true
+  },
+  "poc-capture-mcp": {
+   "type": "local",
+   "command": [
+    "node",
+    "--enable-source-maps",
+    "/home/Godfather_Cyb3r/docker_bundled_agent/linux/mcp-tools/api-server/dist/mcp.mjs"
+   ],
+   "cwd": "$HOME/docker_bundled_agent/linux/mcp-tools/api-server",
+   "enabled": true,
+   "environment": {
+    "POC_OUTPUT_DIR": "/tmp/opencode/"
+   }
+  },
+  "temp-mail-mcp-server": {
+   "type": "local",
+   "command": [
+    "npx",
+    "-y",
+    "@pragyanm/temp-mail-mcp-server@1.0.2"
+   ],
+   "enabled": true
+  }
+ },
+ "provider": {
+  "justwoker": {
+   "npm": "@ai-sdk/anthropic",
+   "name": "JustWoker",
+   "options": {
+    "baseURL": "https://api.justwoker.icu",
+    "apiKey": "REPLACE_ME__see_SECRETS.md"
+   },
+   "models": {
+    "claude-opus-4-8": {
+     "name": "Claude Opus 4.8"
+    }
+   }
+  },
+  "apmix": {
+   "npm": "@ai-sdk/openai-compatible",
+   "name": "Apmix",
+   "options": {
+    "baseURL": "https://api.apmix.ai/v1",
+    "apiKey": "REPLACE_ME__see_SECRETS.md"
+   },
+   "models": {
+    "claude-sonnet-4-6-free": {
+     "name": "Claude Sonnet 4.6 (free)"
+    }
+   }
+  }
+ },
+ "subagent_depth": 2,
+ "agent": {
+  "coordinator": {
+   "model": "opencode/space-bunny-free"
+  },
+  "verification": {
+   "model": "opencode/space-bunny-free"
+  },
+  "recon": {
+   "model": "opencode/space-bunny-free"
+  },
+  "reporting": {
+   "model": "opencode/space-bunny-free"
+  }
+ }
+}

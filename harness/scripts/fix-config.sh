@@ -59,7 +59,7 @@ else:
         changed.append("apmix model entry added")
 
 want = {
-    "coordinator": "apmix/claude-sonnet-4-6-free",
+    "coordinator": "opencode/space-bunny-free",
     "verification": "opencode/space-bunny-free",
     "recon": "opencode/space-bunny-free",
     "reporting": "opencode/space-bunny-free",
