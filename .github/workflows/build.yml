@@ -48,7 +48,7 @@ jobs:
         # registry import would otherwise ship a silent, half-working binary.
         run: |
           BIN=./packages/opencode/dist/opencode-linux-x64/bin/opencode
-          for marker in tool_call_audit_get todo_coverage_check todo_honesty_check endpoint_completion_score asset_generate_test_plan hypothesis_coverage_check harness_self_check bot_notify_hold watchdog-resume withTargetGuard scope_deviations; do
+          for marker in tool_call_audit_get todo_coverage_check todo_honesty_check endpoint_completion_score asset_generate_test_plan hypothesis_coverage_check harness_self_check bot_notify_hold watchdog-resume raw-request-tool scope_deviations outside-loaded-scope; do
             grep -q "$marker" "$BIN" || { echo "MISSING from binary: $marker"; exit 1; }
           done
           echo "all harness markers present"
