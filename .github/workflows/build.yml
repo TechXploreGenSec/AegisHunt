@@ -43,11 +43,34 @@ jobs:
       - name: Smoke test
         run: ./packages/opencode/dist/opencode-linux-x64/bin/opencode --version
 
+      - name: Verify harness tools bundled
+        # Grep proves every enforcement tool survived bundling — a dropped
+        # registry import would otherwise ship a silent, half-working binary.
+        run: |
+          BIN=./packages/opencode/dist/opencode-linux-x64/bin/opencode
+          for marker in tool_call_audit_get todo_coverage_check todo_honesty_check endpoint_completion_score asset_generate_test_plan hypothesis_coverage_check harness_self_check bot_notify_hold watchdog-resume withTargetGuard scope_deviations; do
+            grep -q "$marker" "$BIN" || { echo "MISSING from binary: $marker"; exit 1; }
+          done
+          echo "all harness markers present"
+
+      - name: Pack harness bundle (scripts, docs, version)
+        run: |
+          mkdir -p ./release
+          cp ./packages/opencode/dist/opencode-linux-x64/bin/opencode ./release/opencode
+          tar -czf ./release/harness-bundle.tar.gz harness VERSION README.md
+
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
           name: opencode-1.18.33-linux-x64
-          path: packages/opencode/dist/opencode-linux-x64/bin/opencode
+          path: ./release/opencode
+          if-no-files-found: error
+
+      - name: Upload harness bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-bundle
+          path: ./release/harness-bundle.tar.gz
           if-no-files-found: error
 
   release:
@@ -62,10 +85,20 @@ jobs:
           name: opencode-1.18.33-linux-x64
           path: ./release
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: harness-bundle
+          path: ./release
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          files: ./release/opencode
+          files: |
+            ./release/opencode
+            ./release/harness-bundle.tar.gz
           body: |
             AegisHunt harness binary — stamped `OPENCODE_VERSION=1.18.33`.
-            Linux x64. Run through an env-loading wrapper (see README).
+            Linux x64. Download BOTH assets: `opencode` + `harness-bundle.tar.gz`
+            (run.sh, fetch-methodology.sh, session_watchdog.sh, install.sh,
+            agents, skills, scopes, sanitized config). Launch via run.sh —
+            it preflights env, config, version before starting.
