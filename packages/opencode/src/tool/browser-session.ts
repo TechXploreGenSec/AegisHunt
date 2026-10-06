@@ -376,7 +376,7 @@ export const BrowserClickDownloadTool = Tool.define<typeof ClickDownloadParamete
               entry.page.click(params.selector),
             ]),
           )
-          const suggested = download.suggestedFilename()
+          const suggested = download.suggestedFilename().replace(/[/\\]/g, "_")
           const savedPath = join(dir, `${Date.now()}-${suggested}`)
           yield* Effect.promise(() => download.saveAs(savedPath))
           const buf = yield* Effect.promise(() => readFile(savedPath))
