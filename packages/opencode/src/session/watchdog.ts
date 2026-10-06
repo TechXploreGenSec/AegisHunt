@@ -16,6 +16,7 @@ import { EventV2Bridge } from "@/event-v2-bridge"
 import { Session } from "@/session/session"
 import { SessionPrompt } from "@/session/prompt"
 import { runReadEffect } from "@/tool/graph-db"
+import { DIVERGENT_MIN } from "@/tool/completion-engine"
 
 const NUDGE_PREFIX = "[watchdog-resume]"
 const MAX_CONSECUTIVE_NUDGES = 3
@@ -73,13 +74,20 @@ const incompleteAssetsEffect = (programId: string) =>
     for (const r of testedRows) testedBy.set(String((r as Record<string, unknown>)["asset"]), num(r as Record<string, unknown>, "tested"))
     const blockedBy = new Map<string, number>()
     for (const r of blockedRows) blockedBy.set(String((r as Record<string, unknown>)["asset"]), num(r as Record<string, unknown>, "blocked"))
+    const divRows = yield* runReadEffect(
+      `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint)-[:SUGGESTS]->(h:Hypothesis) WHERE e.program_id = $programId AND h.vuln_class = 'other' AND size(coalesce(h.fingerprint_refs, [])) >= 2 RETURN a.id AS asset, count(DISTINCT h) AS div`,
+      qp,
+    )
+    const divByAsset = new Map<string, number>()
+    for (const r of divRows) divByAsset.set(String((r as Record<string, unknown>)["asset"]), num(r as Record<string, unknown>, "div"))
     const incomplete = assetRows
       .map((r) => {
         const asset = String((r as Record<string, unknown>)["asset"])
         const total = num(r as Record<string, unknown>, "total")
-        return { asset, left: total - (testedBy.get(asset) ?? 0) - (blockedBy.get(asset) ?? 0) }
+        const divShort = Math.max(0, DIVERGENT_MIN - (divByAsset.get(asset) ?? 0))
+        return { asset, left: total - (testedBy.get(asset) ?? 0) - (blockedBy.get(asset) ?? 0), divShort }
       })
-      .filter((a) => a.left > 0)
+      .filter((a) => a.left > 0 || a.divShort > 0)
     return { total: assetRows.length, incomplete }
   })
 
