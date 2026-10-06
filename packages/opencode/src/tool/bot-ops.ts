@@ -2,6 +2,7 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION from "./bot-ops.txt"
 import { runReadEffect } from "./graph-db"
+import { DIVERGENT_MIN } from "./completion-engine"
 
 function code() {
   return Math.random().toString(36).slice(2, 6).toUpperCase()
@@ -257,16 +258,27 @@ export const BotHoldTool = Tool.define<typeof HoldParameters, HoldMeta, never>(
           for (const r of testedRows) testedBy.set(String((r as Record<string, unknown>)["asset"]), num((r as Record<string, unknown>)["tested"]))
           const blockedBy = new Map<string, number>()
           for (const r of blockedRows) blockedBy.set(String((r as Record<string, unknown>)["asset"]), num((r as Record<string, unknown>)["blocked"]))
+          const divRows = yield* runReadEffect(
+            `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint)-[:SUGGESTS]->(h:Hypothesis) WHERE e.program_id = $programId AND h.vuln_class = 'other' AND size(coalesce(h.fingerprint_refs, [])) >= 2 RETURN a.id AS asset, count(DISTINCT h) AS div`,
+            qp,
+          )
+          const divByAsset = new Map<string, number>()
+          for (const r of divRows) divByAsset.set(String((r as Record<string, unknown>)["asset"]), num((r as Record<string, unknown>)["div"]))
           const incomplete = assetRows
             .map((r) => {
               const asset = String((r as Record<string, unknown>)["asset"])
               const total = num((r as Record<string, unknown>)["total"])
-              return { asset, left: total - (testedBy.get(asset) ?? 0) - (blockedBy.get(asset) ?? 0) }
+              const div = divByAsset.get(asset) ?? 0
+              return {
+                asset,
+                left: total - (testedBy.get(asset) ?? 0) - (blockedBy.get(asset) ?? 0),
+                divShort: Math.max(0, DIVERGENT_MIN - div),
+              }
             })
-            .filter((a) => a.left > 0)
+            .filter((a) => a.left > 0 || a.divShort > 0)
           if (incomplete.length > 0) {
             throw new Error(
-              `Cannot hold — ${incomplete.length} asset(s) still incomplete: ${incomplete.map((a) => `${a.asset} (${a.left} left)`).join(", ")}. Move to the next one instead of stopping.`,
+              `Cannot hold — ${incomplete.length} asset(s) still incomplete: ${incomplete.map((a) => `${a.asset} (${a.left} endpoints left, ${a.divShort} divergent hypotheses short)`).join(", ")}. Move to the next one instead of stopping.`,
             )
           }
           if (params.currentAssetKey) {
@@ -275,9 +287,10 @@ export const BotHoldTool = Tool.define<typeof HoldParameters, HoldMeta, never>(
               const total = num((cur as Record<string, unknown>)["total"])
               const tested = testedBy.get(params.currentAssetKey) ?? 0
               const blocked = blockedBy.get(params.currentAssetKey) ?? 0
-              if (tested + blocked < total) {
+              const div = divByAsset.get(params.currentAssetKey) ?? 0
+              if (tested + blocked < total || div < DIVERGENT_MIN) {
                 throw new Error(
-                  `Cannot hold — current asset ${params.currentAssetKey} is only ${total === 0 ? 0 : Math.round(((tested + blocked) / total) * 100)}% complete (${total - tested - blocked} endpoints untested, ${blocked} blocked). Finish or document blockers first.`,
+                  `Cannot hold — current asset ${params.currentAssetKey} is only ${total === 0 ? 0 : Math.round(((tested + blocked) / total) * 100)}% complete (${total - tested - blocked} endpoints untested, ${blocked} blocked, ${div}/${DIVERGENT_MIN} divergent hypotheses). Finish, document blockers, and think divergently first.`,
                 )
               }
             }

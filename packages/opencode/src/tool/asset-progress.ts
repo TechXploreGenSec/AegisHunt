@@ -3,6 +3,7 @@ import * as Tool from "./tool"
 import DESCRIPTION from "./asset-progress.txt"
 import { runReadEffect, runWriteEffect } from "./graph-db"
 import { findMatchingToolCall, hostOf } from "./tool_call_audit"
+import { DIVERGENT_MIN } from "./completion-engine"
 
 // Every number returned here is computed by querying the graph directly —
 // nothing is self-reported by the model. That is the structural fix for
@@ -108,13 +109,25 @@ export const AssetProgressGetTool = Tool.define<typeof ProgressGetParameters, { 
             `MATCH (a:Asset {id: $assetKey})-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(h:Hypothesis) AND NOT (h)-[:TESTED_BY]->(:TestExecution) RETURN count(DISTINCT h) AS open`,
             qp,
           )
+          const divRows = yield* runReadEffect(
+            `MATCH (a:Asset {id: $assetKey})-[:EXPOSES]->(e:Endpoint)-[:SUGGESTS]->(h:Hypothesis)
+             WHERE h.vuln_class = 'other' AND size(coalesce(h.fingerprint_refs, [])) >= 2 RETURN count(DISTINCT h) AS div`,
+            { assetKey: params.assetKey },
+          )
           const total = toNum(totalRows[0]?.["total"])
           const tested = toNum(testedRows[0]?.["tested"])
           const blocked = toNum(blockedRows[0]?.["blocked"])
+          const divergent = toNum(divRows[0]?.["div"])
+          const divergentSatisfied = divergent >= DIVERGENT_MIN
+          const base = progressOf(total, tested, blocked)
           const result = {
             assetKey: params.assetKey,
             programId: params.programId,
-            ...progressOf(total, tested, blocked),
+            ...base,
+            isComplete: base.isComplete && divergentSatisfied,
+            divergent,
+            divergentRequired: DIVERGENT_MIN,
+            divergentSatisfied,
             openHypotheses: toNum(hypsRows[0]?.["open"]),
             findings: toNum(findingsRows[0]?.["findings"]),
           }
@@ -206,6 +219,10 @@ export const AssetGetQueueTool = Tool.define<typeof GetQueueParameters, { queue:
             `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND e.blocked_reason IS NOT NULL RETURN a.id AS asset, count(e) AS blocked`,
             qp,
           )
+          const divRows = yield* runReadEffect(
+            `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint)-[:SUGGESTS]->(h:Hypothesis) WHERE e.program_id = $programId AND h.vuln_class = 'other' AND size(coalesce(h.fingerprint_refs, [])) >= 2 RETURN a.id AS asset, count(DISTINCT h) AS div`,
+            qp,
+          )
           const currentRows = yield* runReadEffect(
             `MATCH (s:SessionState {program_id: $programId}) RETURN s.current_asset AS current`,
             qp,
@@ -214,14 +231,25 @@ export const AssetGetQueueTool = Tool.define<typeof GetQueueParameters, { queue:
           for (const r of testedRows) testedByAsset.set(String(r["asset"]), toNum(r["tested"]))
           const blockedByAsset = new Map<string, number>()
           for (const r of blockedRows) blockedByAsset.set(String(r["asset"]), toNum(r["blocked"]))
+          const divByAsset = new Map<string, number>()
+          for (const r of divRows) divByAsset.set(String(r["asset"]), toNum(r["div"]))
           const queue = assetRows
             .map((r) => {
               const assetKey = String(r["asset"])
               const total = toNum(r["total"])
               const tested = testedByAsset.get(assetKey) ?? 0
               const blocked = blockedByAsset.get(assetKey) ?? 0
+              const divergent = divByAsset.get(assetKey) ?? 0
               const priority = r["priority"] === null || r["priority"] === undefined ? null : toNum(r["priority"])
-              return { assetKey, priority, ...progressOf(total, tested, blocked) }
+              const base = progressOf(total, tested, blocked)
+              return {
+                assetKey,
+                priority,
+                ...base,
+                isComplete: base.isComplete && divergent >= DIVERGENT_MIN,
+                divergent,
+                divergentRequired: DIVERGENT_MIN,
+              }
             })
             .filter((a) => !a.isComplete)
             .sort((a, b) => (a.priority ?? 1e9) - (b.priority ?? 1e9) || b.untested - a.untested)

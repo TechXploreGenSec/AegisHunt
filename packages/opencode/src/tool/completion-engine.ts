@@ -23,6 +23,11 @@ export const VULN_CLASSES = [
 ] as const
 export type VulnClass = (typeof VULN_CLASSES)[number]
 
+// Floor for divergent (unclassifiable, fingerprint-anchored) hypotheses per
+// asset. Single source — asset_progress_get, asset_get_queue, the hold gate,
+// and the watchdog all enforce this same constant.
+export const DIVERGENT_MIN = 3
+
 export interface EndpointProps {
   url: string
   method?: string
@@ -76,7 +81,31 @@ const computeScoreEffect = (endpointKey: string) =>
     const testedClasses = [...new Set(testedRows.map((r) => String((r as Record<string, unknown>)["vulnClass"])))]
     const missing = applicable.filter((c) => !testedClasses.includes(c))
     const score = applicable.length === 0 ? 1 : Math.round(((applicable.length - missing.length) / applicable.length) * 100) / 100
-    return { endpointKey, applicableClasses: applicable, testedClasses, missingClasses: missing, score, ready: missing.length === 0 }
+    const divRows = yield* runReadEffect(
+      `MATCH (e:Endpoint {id: $key})-[:SUGGESTS]->(h:Hypothesis) WHERE h.vuln_class = 'other' AND size(coalesce(h.fingerprint_refs, [])) >= 2 RETURN count(DISTINCT h) AS div`,
+      { key: endpointKey },
+    )
+    const toCount = (v: unknown): number => {
+      if (typeof v === "number") return v
+      if (v !== null && typeof v === "object" && "toNumber" in v) {
+        const fn = (v as { toNumber: unknown }).toNumber
+        if (typeof fn === "function") return (fn as () => number)()
+      }
+      return 0
+    }
+    const divergent = toCount((divRows[0] as Record<string, unknown> | undefined)?.["div"])
+    const divergentReady = divergent >= DIVERGENT_MIN
+    return {
+      endpointKey,
+      applicableClasses: applicable,
+      testedClasses,
+      missingClasses: missing,
+      score,
+      divergent,
+      divergentRequired: DIVERGENT_MIN,
+      divergentReady,
+      ready: missing.length === 0 && divergentReady,
+    }
   })
 
 export const ScoreParameters = Schema.Struct({ endpointKey: Schema.String })
@@ -114,9 +143,19 @@ export const EndpointMarkAssessedTool = Tool.define<typeof MarkAssessedParameter
           yield* ctx.ask({ permission: "completion", patterns: ["*"], always: ["*"], metadata: {} })
           const s = yield* computeScoreEffect(params.endpointKey)
           if (!s.ready) {
+            const gaps = [
+              ...(s.missingClasses.length
+                ? [`missing coverage for: ${s.missingClasses.join(", ")} — propose and test a hypothesis for each`]
+                : []),
+              ...(!s.divergentReady
+                ? [
+                    `only ${s.divergent}/${s.divergentRequired} anchored divergent hypotheses — propose ${s.divergentRequired - s.divergent} more vulnClass 'other' hypotheses with >=2 fingerprintRefs each`,
+                  ]
+                : []),
+            ]
             throw new Error(
-              `Cannot mark ${params.endpointKey} assessed — missing coverage for: ${s.missingClasses.join(", ")}. ` +
-                `Propose and test a hypothesis for each, or asset_mark_blocker the endpoint if one genuinely cannot be tested.`,
+              `Cannot mark ${params.endpointKey} assessed — ${gaps.join("; ")}. ` +
+                `Or asset_mark_blocker the endpoint if it genuinely cannot be tested.`,
             )
           }
           yield* runWriteEffect(
