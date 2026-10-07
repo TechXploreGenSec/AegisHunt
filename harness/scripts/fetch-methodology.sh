@@ -48,6 +48,13 @@ else
     esac
     if [[ -f "$d/SKILL.md" ]]; then
       cp -a "$d" "$SKILLS_DIR/recon-skills-$name"
+      # Skill service resolves by frontmatter `name:`, not by directory name
+      # (src/skill/index.ts reads md.data.name). Without this the
+      # `recon-skills-` prefix is invisible to skill lookup, harness_self_check's
+      # prefix probe always returns 0, and every pack collides with the bare
+      # agentic-bug-hunter skill of the same name.
+      sed -i -E "0,/^name:[[:space:]]*/s|^name:[[:space:]]*.*|name: recon-skills-$name|" \
+        "$SKILLS_DIR/recon-skills-$name/SKILL.md"
     else
       # pack without top-level SKILL.md: keep structure under one folder
       mkdir -p "$SKILLS_DIR/recon-skills-pack"
