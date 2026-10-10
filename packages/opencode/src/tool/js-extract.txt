@@ -1,1 +1,0 @@
-Fetch a JS bundle, regex-extract likely API paths, write Endpoint nodes + EXPOSES edges. Secret shapes are candidates only — hand them to a real scanner, never conclude from regex.

@@ -2,7 +2,8 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { recordToolCall } from "./tool_call_audit"
 import DESCRIPTION from "./content-discovery.txt"
-import { getLoadedScope, observeScope } from "./scope-gate"
+import { getLoadedScope, observeScope, scopeRequestHeaders, scopeUpstreamProxy } from "./scope-gate"
+import { unproxiedEnv } from "./no-proxy"
 import { runWriteEffect } from "./graph-db"
 
 export const Parameters = Schema.Struct({
@@ -32,6 +33,7 @@ export const ContentDiscoveryTool = Tool.define<typeof Parameters, Metadata, nev
           })
           const scope = getLoadedScope(params.programId)
           observeScope(scope, params.programId, "content_discovery", params.target, "active-recon")
+          const upstreamProxy = scopeUpstreamProxy(scope)
           if (!(params.rateLimit > 0)) throw new Error("rateLimit must be positive from computePerLaneRate")
           const timeout = Math.round(params.timeoutSeconds ?? 300)
           const runId = crypto.randomUUID()
@@ -51,8 +53,10 @@ export const ContentDiscoveryTool = Tool.define<typeof Parameters, Metadata, nev
                 String(timeout),
                 "-s",
                 ...(params.extensions?.length ? ["-e", params.extensions.join(",")] : []),
+                ...Object.entries(scopeRequestHeaders(scope)).flatMap(([k, v]) => ["-H", `${k}: ${v}`]),
+                ...(upstreamProxy ? ["-x", upstreamProxy] : []),
               ],
-              { stdout: "pipe", stderr: "pipe" },
+              { stdout: "pipe", stderr: "pipe", env: unproxiedEnv() },
             )
             const text = await new Response(proc.stdout).text()
             await proc.exited

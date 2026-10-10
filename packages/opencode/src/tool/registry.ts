@@ -64,7 +64,6 @@ import { BotNotifyTool, BotCheckRepliesTool, BotHoldTool } from "./bot-ops"
 import { ScopeSetTool } from "./scope-set"
 import { AssetFocusTool } from "./asset-focus"
 import { PhaseCompleteTool } from "./phase-complete"
-import { JsExtractTool } from "./js-extract"
 import { OobStartTool, OobPlantTool, OobCheckTool, OobStopTool } from "./oob-ops"
 import {
   AssetSetCurrentTool,
@@ -207,7 +206,6 @@ const layer = Layer.effect(
     const scopeSet = yield* ScopeSetTool
     const assetFocus = yield* AssetFocusTool
     const phaseComplete = yield* PhaseCompleteTool
-    const jsExtract = yield* JsExtractTool
     const oobStart = yield* OobStartTool
     const oobPlant = yield* OobPlantTool
     const oobCheck = yield* OobCheckTool
@@ -373,7 +371,6 @@ const layer = Layer.effect(
           scopeSet: Tool.init(scopeSet),
           assetFocus: Tool.init(assetFocus),
           phaseComplete: Tool.init(phaseComplete),
-          jsExtract: Tool.init(jsExtract),
           oobStart: Tool.init(oobStart),
           oobPlant: Tool.init(oobPlant),
           oobCheck: Tool.init(oobCheck),
@@ -447,7 +444,6 @@ const layer = Layer.effect(
             tool.scopeSet,
             tool.assetFocus,
             tool.phaseComplete,
-            tool.jsExtract,
             tool.oobStart,
             tool.oobPlant,
             tool.oobCheck,

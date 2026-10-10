@@ -2,61 +2,24 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION from "./completion-engine.txt"
 import { runReadEffect, runWriteEffect } from "./graph-db"
-
-// Transparent, auditable completeness: which vuln classes even apply to an
-// endpoint (simple explainable rules on observable properties), and how
-// many of those have a real TestExecution behind them. The model never
-// declares "done" — endpoint_mark_assessed refuses unless the computed
-// score is complete.
-
-export const VULN_CLASSES = [
-  "idor",
-  "ssrf",
-  "auth-bypass",
-  "injection",
-  "xss",
-  "business-logic",
-  "access-control",
-  "info-disclosure",
-  "rce",
-  "other",
-] as const
-export type VulnClass = (typeof VULN_CLASSES)[number]
+import {
+  applicableForPrograms,
+  applicableVulnClasses,
+  excludedForPrograms,
+  type EndpointProps,
+  type VulnClass,
+} from "./vuln-classes"
 
 // Floor for divergent (unclassifiable, fingerprint-anchored) hypotheses per
 // asset. Single source — asset_progress_get, asset_get_queue, the hold gate,
 // and the watchdog all enforce this same constant.
 export const DIVERGENT_MIN = 3
 
-export interface EndpointProps {
-  url: string
-  method?: string
-  contentType?: string
-  requiresAuth?: boolean
-  paramNames?: string[]
-}
-
-export function applicableVulnClasses(ep: EndpointProps): VulnClass[] {
-  const classes = new Set<VulnClass>(["info-disclosure"])
-  const params = (ep.paramNames ?? []).map((p) => p.toLowerCase())
-  const path = (ep.url ?? "").toLowerCase()
-  if (params.some((p) => /^(id|uid|user_?id|ref|account_?id)$/.test(p)) || /\/\d+(\/|$)/.test(path))
-    classes.add("idor")
-  if (params.length > 0) {
-    classes.add("injection")
-    classes.add("business-logic")
-  }
-  if (ep.requiresAuth) {
-    classes.add("auth-bypass")
-    classes.add("access-control")
-  }
-  if (params.some((p) => /(url|callback|webhook|redirect|next|return|target)/.test(p))) classes.add("ssrf")
-  if ((ep.contentType ?? "").includes("html") || !path.includes("/api")) classes.add("xss")
-  if (params.some((p) => /(file|filename|path|cmd|command)/.test(p))) classes.add("rce")
-  if (["POST", "PUT", "PATCH", "DELETE"].includes((ep.method ?? "GET").toUpperCase())) classes.add("business-logic")
-  return [...classes]
-}
-
+// Transparent, auditable completeness: which vuln classes even apply to an
+// endpoint (simple explainable rules on observable properties, see
+// vuln-classes.ts — the single source of truth), and how many of those have
+// a real TestExecution or triage kill behind them. The model never declares
+// "done" — endpoint_mark_assessed refuses unless the computed score is complete.
 export function rowProps(row: Record<string, unknown>): EndpointProps {
   const e = (row["e"] ?? {}) as { properties?: Record<string, unknown> }
   const p = (e.properties ?? row) as Record<string, unknown>
@@ -73,23 +36,46 @@ const computeScoreEffect = (endpointKey: string) =>
   Effect.gen(function* () {
     const epRows = yield* runReadEffect(`MATCH (e:Endpoint {id: $key}) RETURN e`, { key: endpointKey })
     if (!epRows[0]) throw new Error(`Endpoint ${endpointKey} not found — recon may not have logged it yet`)
-    const applicable = applicableVulnClasses(rowProps(epRows[0] as Record<string, unknown>))
+    // Action-1 fix: the score MUST filter program-excluded classes, exactly
+    // like plan generation and coverage do. An unfiltered set here re-creates
+    // the deadlock one gate over: mark_assessed demanding resolution for a
+    // class propose refuses outright.
+    const epNode = (epRows[0] as Record<string, unknown>)["e"] as { properties?: Record<string, unknown> } | undefined
+    const epProps = (epNode?.properties ?? epRows[0]) as Record<string, unknown>
+    const epProgram = epProps["program_id"]
+    const applicable = applicableForPrograms(
+      rowProps(epRows[0] as Record<string, unknown>),
+      typeof epProgram === "string" && epProgram ? [epProgram] : [],
+    )
     const testedRows = yield* runReadEffect(
       `MATCH (e:Endpoint {id: $key})-[:SUGGESTS]->(h:Hypothesis)-[:TESTED_BY]->(t:TestExecution) WHERE t.outcome IN ['confirmed', 'ruled_out'] RETURN DISTINCT h.vuln_class AS vulnClass`,
       { key: endpointKey },
     )
-    const testedClasses = [...new Set(testedRows.map((r) => String((r as Record<string, unknown>)["vulnClass"])))]
+    // Killed-by-triage classes are resolved without testing — triage would
+    // refuse them, so demanding test spend on them manufactures junk.
+    const killedRows = yield* runReadEffect(
+      `MATCH (e:Endpoint {id: $key})-[:SUGGESTS]->(h:Hypothesis) WHERE h.status = 'killed' RETURN DISTINCT h.vuln_class AS vulnClass`,
+      { key: endpointKey },
+    )
+    const testedClasses = [
+      ...new Set([
+        ...testedRows.map((r) => String((r as Record<string, unknown>)["vulnClass"])),
+        ...killedRows.map((r) => String((r as Record<string, unknown>)["vulnClass"])),
+      ]),
+    ]
     const missing = applicable.filter((c) => !testedClasses.includes(c))
     const score = applicable.length === 0 ? 1 : Math.round(((applicable.length - missing.length) / applicable.length) * 100) / 100
     const divRows = yield* runReadEffect(
-      `MATCH (e:Endpoint {id: $key})-[:SUGGESTS]->(h:Hypothesis) WHERE h.vuln_class = 'other' AND size(coalesce(h.fingerprint_refs, [])) >= 2 RETURN count(DISTINCT h) AS div`,
+      `MATCH (e:Endpoint {id: $key})-[:SUGGESTS]->(h:Hypothesis) WHERE h.vuln_class = 'other' AND h.status <> 'killed' AND size(coalesce(h.fingerprint_refs, [])) >= 2 RETURN count(DISTINCT h) AS div`,
       { key: endpointKey },
     )
     const toCount = (v: unknown): number => {
       if (typeof v === "number") return v
       if (v !== null && typeof v === "object" && "toNumber" in v) {
-        const fn = (v as { toNumber: unknown }).toNumber
-        if (typeof fn === "function") return (fn as () => number)()
+        // call as a method: driver 6.2.0's Integer.toNumber reads this.high/this.low,
+        // so a detached call throws instead of converting
+        const fn = (v as { toNumber: () => number }).toNumber
+        if (typeof fn === "function") return fn.call(v)
       }
       return 0
     }
@@ -190,9 +176,15 @@ export const AssetGenerateTestPlanTool = Tool.define<typeof GeneratePlanParamete
           if (!rows.length)
             throw new Error(`No endpoints for asset ${params.assetKey} — recon has not written any yet`)
           const planItems: Array<{ endpointKey: string; vulnClass: VulnClass; taskLabel: string }> = []
+          const planPrograms = new Set<string>()
+          for (const pe of yield* runReadEffect(`MATCH (a:Asset {id: $assetKey})-[:EXPOSES]->(e:Endpoint) RETURN DISTINCT e.program_id AS programId`, { assetKey: params.assetKey })) {
+            const pid = (pe as Record<string, unknown>)["programId"]
+            if (typeof pid === "string" && pid) planPrograms.add(pid)
+          }
+          const planExcluded = excludedForPrograms(planPrograms)
           for (const row of rows) {
             const props = rowProps(row as Record<string, unknown>)
-            for (const vulnClass of applicableVulnClasses(props)) {
+            for (const vulnClass of applicableVulnClasses(props).filter((c) => !planExcluded.has(c))) {
               planItems.push({ endpointKey: props.url || params.assetKey, vulnClass, taskLabel: `${vulnClass}: ${props.url}` })
             }
           }
@@ -232,6 +224,14 @@ export const HypothesisCoverageCheckTool = Tool.define<typeof HypCoverageParamet
           )
           if (!rows.length)
             throw new Error(`No endpoints for asset ${params.assetKey} — recon has not written any yet`)
+          // Program-excluded classes are unsatisfiable here (propose refuses
+          // them) — demanding them would fail this gate forever.
+          const covPrograms = new Set<string>()
+          for (const pe of yield* runReadEffect(`MATCH (a:Asset {id: $assetKey})-[:EXPOSES]->(e:Endpoint) RETURN DISTINCT e.program_id AS programId`, { assetKey: params.assetKey })) {
+            const pid = (pe as Record<string, unknown>)["programId"]
+            if (typeof pid === "string" && pid) covPrograms.add(pid)
+          }
+          const covExcluded = excludedForPrograms(covPrograms)
           const missing: Array<{ endpointKey: string; vulnClass: string }> = []
           let total = 0
           for (const row of rows) {
@@ -240,7 +240,7 @@ export const HypothesisCoverageCheckTool = Tool.define<typeof HypCoverageParamet
               ...((row as Record<string, unknown>)["direct"] as string[] ?? []),
               ...((row as Record<string, unknown>)["viaParam"] as string[] ?? []),
             ])
-            for (const vulnClass of applicableVulnClasses(props)) {
+            for (const vulnClass of applicableVulnClasses(props).filter((c) => !covExcluded.has(c))) {
               total++
               if (!have.has(vulnClass)) missing.push({ endpointKey: props.url || params.assetKey, vulnClass })
             }
@@ -250,7 +250,7 @@ export const HypothesisCoverageCheckTool = Tool.define<typeof HypCoverageParamet
             const more = missing.length > 12 ? ` (+${missing.length - 12} more)` : ""
             throw new Error(
               `Hypothesis coverage short: ${missing.length}/${total} (endpoint, class) pairs have no hypothesis: ${shown}${more}. ` +
-                `Propose one per missing pair — every severity, every class, including unfamiliar vectors — then retry.`,
+                `Propose one per missing pair — or file a REJECT kill (triageVerdict REJECT + verdictReason) for pairs triage would refuse — then retry.`,
             )
           }
           return {

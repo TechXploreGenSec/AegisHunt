@@ -21,6 +21,20 @@ export interface ScopeConfig {
   /** Runtime-only. When true, every target is allowed (still logs nothing —
    *  there is no loaded scope to deviate from). Never persisted by scope_set. */
   unrestricted?: boolean
+  /** Program-declared out-of-program vuln classes (our class IDs). Hard exclusions:
+   *  plan generation skips them, propose/produce refuse them. */
+  excludedVulnClasses?: string[]
+  /** Conditional exclusions (e.g. "CORS on non-sensitive only"): kept in plan,
+   *  but finding_produce attaches a sensitivity warning — triage will demand proof. */
+  sensitiveVulnClasses?: string[]
+  /** Program-mandated request identity (e.g. Intigriti UA + username header).
+   *  Merged into every live-target request our tools send. */
+  customUserAgent?: string
+  customHeaders?: Record<string, string>
+  /** Optional upstream proxy (e.g. "http://127.0.0.1:8080") for proxy-capable
+   *  tools (ffuf -x, mitmdump upstream mode). Absent = tools use direct/env
+   *  behavior. Explicit config, never forced stripping. */
+  upstreamProxy?: string
 }
 
 const cache = new Map<string, ScopeConfig>()
@@ -121,6 +135,9 @@ export function setScopeConfig(scope: ScopeConfig): ScopeConfig {
   scope.outOfScope ??= []
   scope.allowedTestTypes ??= []
   scope.executionMode ??= "local"
+  scope.excludedVulnClasses ??= []
+  scope.sensitiveVulnClasses ??= []
+  scope.customHeaders ??= {}
   assertScope(scope)
   if (scope.inScope.length === 0) {
     // Empty scope declares no boundary: everything is allowed (explicit
@@ -168,6 +185,37 @@ export function isInScope(scope: ScopeConfig, target: string): boolean {
   return scope.inScope.some((p) => hostMatches(p, host))
 }
 
+/**
+ * Headers every live-target request must carry for a program: the custom
+ * User-Agent plus any custom headers (e.g. researcher identity headers).
+ * Tools merge these in (scope wins on conflict).
+ */
+export function scopeRequestHeaders(scope: ScopeConfig): Record<string, string> {
+  const headers: Record<string, string> = {}
+  if (scope.customUserAgent) headers["User-Agent"] = scope.customUserAgent
+  for (const [k, v] of Object.entries(scope.customHeaders ?? {})) {
+    if (k && typeof v === "string") headers[k] = v
+  }
+  return headers
+}
+
+/** Configured upstream proxy URL for proxy-capable tools, or null. */
+export function scopeUpstreamProxy(scope: ScopeConfig): string | null {
+  const p = (scope.upstreamProxy ?? "").trim()
+  return p ? p : null
+}
+
+/**
+ * Vuln-class exclusions declared for a program (never throws — absent scope
+ * or absent fields simply mean nothing excluded).
+ */
+export function scopeExclusions(programId: string): { excluded: string[]; sensitive: string[] } {
+  const found = listLoadedScopes().find((s) => s.programId === programId)
+  return {
+    excluded: found?.excludedVulnClasses ?? [],
+    sensitive: found?.sensitiveVulnClasses ?? [],
+  }
+}
 /**
  * Observe-not-block checkpoint for live-target tools. Returns the scope
  * for rate math; NEVER throws. When a loaded (non-unrestricted) scope

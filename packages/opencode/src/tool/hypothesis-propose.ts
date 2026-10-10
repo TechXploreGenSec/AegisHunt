@@ -2,21 +2,12 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION from "./hypothesis-propose.txt"
 import { runWriteEffect, runReadEffect } from "./graph-db"
+import { scopeExclusions } from "./scope-gate"
+import { VULN_CLASSES } from "./vuln-classes"
 
 export const Parameters = Schema.Struct({
   programId: Schema.String,
-  vulnClass: Schema.Literals([
-    "idor",
-    "ssrf",
-    "auth-bypass",
-    "injection",
-    "xss",
-    "business-logic",
-    "access-control",
-    "info-disclosure",
-    "rce",
-    "other",
-  ]),
+  vulnClass: Schema.Literals(VULN_CLASSES),
   attachToLabel: Schema.Literals(["Endpoint", "Parameter"]),
   attachToKey: Schema.String,
   attachToKeyField: Schema.optional(Schema.String),
@@ -32,6 +23,15 @@ export const Parameters = Schema.Struct({
   }),
   fingerprintRefs: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
     description: "Implementation choices this hypothesis combines (ORM, validation lib, session store, auth mechanism, deployment detail...). REQUIRED with >=2 entries when vulnClass is 'other'.",
+  }),
+  triageVerdict: Schema.optional(Schema.Literals(["ACCEPT", "CONDITIONAL", "REJECT"])).annotate({
+    description: "Mentor's bounty pre-mortem. REJECT files a persistent kill (status 'killed'): it satisfies coverage, is excluded from completion demands, and is never re-briefed.",
+  }),
+  severity: Schema.optional(Schema.Literals(["info", "low", "medium", "high", "critical"])).annotate({
+    description: "Estimated bounty severity for prioritization.",
+  }),
+  verdictReason: Schema.optional(Schema.String).annotate({
+    description: "REQUIRED when triageVerdict is REJECT: the one-line kill reason (which exclusion, why unprovable, or why destructive-only).",
   }),
 })
 
@@ -51,16 +51,23 @@ export const HypothesisProposeTool = Tool.define<typeof Parameters, Metadata, ne
             always: ["*"],
             metadata: { vulnClass: params.vulnClass },
           })
-          if (params.expectedPositiveSignal.trim().length < 15)
-            throw new Error("expectedPositiveSignal must be >= 15 chars — say what you would actually observe")
-          if (params.expectedNegativeSignal.trim().length < 15)
-            throw new Error("expectedNegativeSignal must be >= 15 chars — say what ruling out looks like")
           if (params.rationale.trim().length < 20)
             throw new Error("rationale must be >= 20 chars — cite methodology pattern, not a guess")
-          if (!params.methodologySource || params.methodologySource.trim().length < 10)
-            throw new Error("methodologySource is REQUIRED (>= 10 chars) — every hypothesis must ground in a methodology pattern, skill, or HackTricks section")
+          const isKill = params.triageVerdict === "REJECT"
+          if (isKill && (!params.verdictReason || params.verdictReason.trim().length < 10))
+            throw new Error("triageVerdict REJECT requires verdictReason >= 10 chars — the one-line kill reason triage would give")
+          if (!isKill) {
+            if (params.expectedPositiveSignal.trim().length < 15)
+              throw new Error("expectedPositiveSignal must be >= 15 chars — say what you would actually observe")
+            if (params.expectedNegativeSignal.trim().length < 15)
+              throw new Error("expectedNegativeSignal must be >= 15 chars — say what ruling out looks like")
+            if (!params.methodologySource || params.methodologySource.trim().length < 10)
+              throw new Error("methodologySource is REQUIRED (>= 10 chars) — every hypothesis must ground in a methodology pattern, skill, or HackTricks section")
+          }
+          if (scopeExclusions(params.programId).excluded.includes(params.vulnClass))
+            throw new Error(`vulnClass '${params.vulnClass}' is program-excluded for ${params.programId} — proposing it wastes a cycle triage will reject; pick a covered class or another endpoint`)
           const refs = (params.fingerprintRefs ?? []).map((r) => r.trim()).filter(Boolean)
-          if (params.vulnClass === "other") {
+          if (params.vulnClass === "other" && !isKill) {
             if (refs.length < 2)
               throw new Error("vulnClass 'other' requires fingerprintRefs with >= 2 implementation choices being combined — weirdness must be anchored, not free-floating")
             if (params.rationale.trim().length < 60)
@@ -78,8 +85,9 @@ export const HypothesisProposeTool = Tool.define<typeof Parameters, Metadata, ne
             throw new Error(
               `Attach target not in graph: ${params.attachToLabel} ${attachField}=${params.attachToKey} — recon has not logged it (or the key is wrong). Log it first, then propose.`,
             )
+          const status = isKill ? "killed" : "open"
           yield* runWriteEffect(
-            `MERGE (h:Hypothesis {id: $hypothesisId}) SET h.vuln_class = $vulnClass, h.rationale = $rationale, h.methodology_source = $methodologySource, h.expected_positive_signal = $expectedPositive, h.expected_negative_signal = $expectedNegative, h.fingerprint_refs = $fingerprintRefs, h.status = 'open', h.program_id = $programId, h.created_at = timestamp() RETURN h`,
+            `MERGE (h:Hypothesis {id: $hypothesisId}) SET h.vuln_class = $vulnClass, h.rationale = $rationale, h.methodology_source = $methodologySource, h.expected_positive_signal = $expectedPositive, h.expected_negative_signal = $expectedNegative, h.fingerprint_refs = $fingerprintRefs, h.triage_verdict = $triageVerdict, h.severity = $severity, h.verdict_reason = $verdictReason, h.status = $status, h.program_id = $programId, h.created_at = timestamp() RETURN h`,
             {
               hypothesisId,
               vulnClass: params.vulnClass,
@@ -88,6 +96,10 @@ export const HypothesisProposeTool = Tool.define<typeof Parameters, Metadata, ne
               expectedPositive: params.expectedPositiveSignal,
               expectedNegative: params.expectedNegativeSignal,
               fingerprintRefs: (params.fingerprintRefs ?? []).map((r) => r.trim()).filter(Boolean),
+              triageVerdict: params.triageVerdict ?? null,
+              severity: params.severity ?? null,
+              verdictReason: params.verdictReason ?? null,
+              status,
               programId: params.programId,
             },
           )
@@ -96,9 +108,9 @@ export const HypothesisProposeTool = Tool.define<typeof Parameters, Metadata, ne
             { attachToKey: params.attachToKey, hypothesisId },
           )
           return {
-            title: `hypothesis ${hypothesisId}`,
-            output: JSON.stringify({ hypothesisId, status: "open" }),
-            metadata: { hypothesisId, status: "open" },
+            title: isKill ? `kill ${hypothesisId}` : `hypothesis ${hypothesisId}`,
+            output: JSON.stringify({ hypothesisId, status }),
+            metadata: { hypothesisId, status },
           }
         }),
     } satisfies Tool.DefWithoutID<typeof Parameters, Metadata>

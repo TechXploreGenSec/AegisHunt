@@ -2,6 +2,7 @@ import { Effect, Stream } from "effect"
 import os from "os"
 import { createWriteStream } from "node:fs"
 import * as Tool from "./tool"
+import { stripProxyEnv } from "./no-proxy"
 import path from "path"
 import { containsPath, type InstanceContext } from "../project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
@@ -419,10 +420,11 @@ export const ShellTool = Tool.define(
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
       )
-      return {
+      // Enforced Tor bypass: tool shells never inherit operator proxy vars.
+      return stripProxyEnv({
         ...process.env,
         ...extra.env,
-      }
+      })
     })
 
     const run = Effect.fn("ShellTool.run")(function* (

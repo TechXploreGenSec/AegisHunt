@@ -239,7 +239,7 @@ export const BotHoldTool = Tool.define<typeof HoldParameters, HoldMeta, never>(
             qp,
           )
           const testedRows = yield* runReadEffect(
-            `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(h:Hypothesis)-[:TESTED_BY]->(t:TestExecution) AND t.outcome IN ['confirmed', 'ruled_out'] RETURN a.id AS asset, count(DISTINCT e) AS tested`,
+            `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId MATCH (e)-[:SUGGESTS]->(:Hypothesis)-[:TESTED_BY]->(t:TestExecution) WHERE t.outcome IN ['confirmed', 'ruled_out'] RETURN a.id AS asset, count(DISTINCT e) AS tested`,
             qp,
           )
           const blockedRows = yield* runReadEffect(
@@ -249,8 +249,10 @@ export const BotHoldTool = Tool.define<typeof HoldParameters, HoldMeta, never>(
           const num = (v: unknown): number => {
             if (typeof v === "number") return v
             if (v !== null && typeof v === "object" && "toNumber" in v) {
-              const fn = (v as { toNumber: unknown }).toNumber
-              if (typeof fn === "function") return (fn as () => number)()
+              // call as a method: driver 6.2.0's Integer.toNumber reads this.high/this.low,
+              // so a detached call throws instead of converting
+              const fn = (v as { toNumber: () => number }).toNumber
+              if (typeof fn === "function") return fn.call(v)
             }
             return 0
           }

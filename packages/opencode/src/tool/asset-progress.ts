@@ -14,8 +14,10 @@ function toNum(value: unknown): number {
   if (typeof value === "number") return value
   if (typeof value === "string") return Number(value) || 0
   if (value !== null && typeof value === "object" && "toNumber" in value) {
-    const fn = (value as { toNumber: unknown }).toNumber
-    if (typeof fn === "function") return (fn as () => number)()
+    // call as a method: driver 6.2.0's Integer.toNumber reads this.high/this.low,
+    // so a detached call throws instead of converting
+    const fn = (value as { toNumber: () => number }).toNumber
+    if (typeof fn === "function") return fn.call(value)
   }
   return 0
 }
@@ -94,7 +96,7 @@ export const AssetProgressGetTool = Tool.define<typeof ProgressGetParameters, { 
             qp,
           )
           const testedRows = yield* runReadEffect(
-            `MATCH (a:Asset {id: $assetKey})-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(h:Hypothesis)-[:TESTED_BY]->(t:TestExecution) AND t.outcome IN ['confirmed', 'ruled_out'] RETURN count(DISTINCT e) AS tested`,
+            `MATCH (a:Asset {id: $assetKey})-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId MATCH (e)-[:SUGGESTS]->(:Hypothesis)-[:TESTED_BY]->(t:TestExecution) WHERE t.outcome IN ['confirmed', 'ruled_out'] RETURN count(DISTINCT e) AS tested`,
             qp,
           )
           const blockedRows = yield* runReadEffect(
@@ -106,7 +108,7 @@ export const AssetProgressGetTool = Tool.define<typeof ProgressGetParameters, { 
             { assetKey: params.assetKey },
           )
           const hypsRows = yield* runReadEffect(
-            `MATCH (a:Asset {id: $assetKey})-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(h:Hypothesis) AND NOT (h)-[:TESTED_BY]->(:TestExecution) RETURN count(DISTINCT h) AS open`,
+            `MATCH (a:Asset {id: $assetKey})-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId MATCH (e)-[:SUGGESTS]->(h:Hypothesis) WHERE NOT (h)-[:TESTED_BY]->(:TestExecution) RETURN count(DISTINCT h) AS open`,
             qp,
           )
           const divRows = yield* runReadEffect(
@@ -212,7 +214,7 @@ export const AssetGetQueueTool = Tool.define<typeof GetQueueParameters, { queue:
             qp,
           )
           const testedRows = yield* runReadEffect(
-            `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId AND (e)-[:SUGGESTS]->(h:Hypothesis)-[:TESTED_BY]->(t:TestExecution) AND t.outcome IN ['confirmed', 'ruled_out'] RETURN a.id AS asset, count(DISTINCT e) AS tested`,
+            `MATCH (a:Asset)-[:EXPOSES]->(e:Endpoint) WHERE e.program_id = $programId MATCH (e)-[:SUGGESTS]->(:Hypothesis)-[:TESTED_BY]->(t:TestExecution) WHERE t.outcome IN ['confirmed', 'ruled_out'] RETURN a.id AS asset, count(DISTINCT e) AS tested`,
             qp,
           )
           const blockedRows = yield* runReadEffect(

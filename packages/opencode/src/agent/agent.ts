@@ -337,7 +337,6 @@ const layer = Layer.effect(
                 graph_upsert_edge: "allow",
                 graph_get_untested_endpoints: "allow",
                 content_discovery: "allow",
-                js_extract_endpoints: "allow",
                 asset_progress: "allow",
                 phase_complete: "allow",
                 "memory_*": "allow",

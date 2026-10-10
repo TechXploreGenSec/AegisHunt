@@ -5,7 +5,7 @@ import DESCRIPTION from "./browser-session.txt"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { mkdir, readFile } from "node:fs/promises"
-import { getLoadedScope, observeScope } from "./scope-gate"
+import { getLoadedScope, observeScope, scopeRequestHeaders } from "./scope-gate"
 import type { Browser, Page } from "playwright"
 
 const REALISTIC_UA =
@@ -52,7 +52,8 @@ function getSessionEffect(programId: string, headless: boolean, channel: Channel
     if (existing) return { entry: existing, key }
     const mod = await import("playwright").catch(() => null)
     if (!mod) throw new Error('playwright not installed — run "bun add playwright"')
-    const launchOpts: Parameters<typeof mod.chromium.launch>[0] = { headless }
+    // Enforced Tor bypass: Playwright honors env proxy unless told otherwise.
+    const launchOpts: Parameters<typeof mod.chromium.launch>[0] = { headless, proxy: { server: "per-context" } }
     if (channel !== "chromium") launchOpts.channel = channel
     // Prefer the real installed browser; fall back to bundled Chromium
     // so a missing channel binary degrades instead of failing the session.
@@ -61,12 +62,20 @@ function getSessionEffect(programId: string, headless: boolean, channel: Channel
       browser = await mod.chromium.launch(launchOpts)
     } catch {
       if (channel === "chromium") throw new Error("Chromium launch failed — run 'bunx playwright install chromium'")
-      browser = await mod.chromium.launch({ headless })
+      browser = await mod.chromium.launch({ headless, proxy: { server: "per-context" } })
     }
+    // Program-mandated identity rides on every browser context; falls back
+    // to the realistic default when the scope declares none.
+    const scopeHeaders = scopeRequestHeaders(getLoadedScope(programId))
     const context = await browser.newContext({
       viewport: { width: 1366, height: 850 },
-      userAgent: REALISTIC_UA,
+      userAgent: scopeHeaders["User-Agent"] ?? REALISTIC_UA,
     })
+    if (Object.keys(scopeHeaders).length > 0) {
+      const { "User-Agent": _ua, ...extra } = scopeHeaders
+      void _ua
+      if (Object.keys(extra).length > 0) await context.setExtraHTTPHeaders(extra)
+    }
     const page = await context.newPage()
     const entry: SessionEntry = { browser, page, networkLog: [], consoleLog: [] }
     page.on("request", (req) => {

@@ -2,7 +2,8 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { recordToolCall } from "./tool_call_audit"
 import DESCRIPTION from "./mitm-ops.txt"
-import { getLoadedScope, observeScope } from "./scope-gate"
+import { getLoadedScope, observeScope, scopeRequestHeaders, scopeUpstreamProxy } from "./scope-gate"
+import { unproxiedEnv } from "./no-proxy"
 
 const DB_PATH = process.env.MITM_TRAFFIC_DB_PATH ?? "./mitm_mcp_traffic.db"
 
@@ -61,6 +62,8 @@ export const MitmStartProxyTool = Tool.define<typeof StartParameters, StartMeta,
           if (proxy) return { title: "proxy already running", output: "{}", metadata: { pid: null, listenPort: proxy.listenPort } }
           const port = Math.round(params.listenPort ?? 8080)
           const addonPath = process.env.MITM_ADDON_PATH ?? "./mitm_addon.py"
+          // Optional upstream chaining: only when the scope configures it.
+          const upstreamProxy = scopeUpstreamProxy(getLoadedScope(params.programId))
           const proc = Bun.spawn(
             [
               "mitmdump",
@@ -68,6 +71,7 @@ export const MitmStartProxyTool = Tool.define<typeof StartParameters, StartMeta,
               addonPath,
               "--listen-port",
               String(port),
+              ...(upstreamProxy ? ["--mode", `upstream:${upstreamProxy}`] : []),
               "--set",
               `traffic_db=${DB_PATH}`,
               "--set",
@@ -75,7 +79,7 @@ export const MitmStartProxyTool = Tool.define<typeof StartParameters, StartMeta,
               "--set",
               `program_id=${params.programId}`,
             ],
-            { stdout: "ignore", stderr: "ignore" },
+            { stdout: "ignore", stderr: "ignore", env: unproxiedEnv() },
           )
           proxy = { proc: proc as unknown as ProxyHandle["proc"], programId: params.programId, listenPort: port }
           return {
@@ -214,7 +218,7 @@ export const MitmReplayFlowTool = Tool.define<typeof ReplayParameters, ReplayMet
           if (!flow) throw new Error(`Flow ${params.flowId} not found`)
           const url = String(flow["url"] ?? "")
           observeScope(scope, params.programId, "mitm_replay_flow", url, "interaction")
-          const headers = { ...JSON.parse(String(flow["headers"] ?? "{}")), ...((params.modifiedHeaders ?? {}) as Record<string, string>) }
+          const headers = { ...JSON.parse(String(flow["headers"] ?? "{}")), ...((params.modifiedHeaders ?? {}) as Record<string, string>), ...scopeRequestHeaders(getLoadedScope(params.programId)) }
           const res = yield* Effect.promise(() =>
             fetch(url, {
               method: String(flow["method"] ?? "GET"),
@@ -271,7 +275,7 @@ export const MitmFuzzEndpointTool = Tool.define<typeof FuzzParameters, FuzzMeta,
             const res = yield* Effect.promise(() =>
               fetch(u.toString(), {
                 method: String(flow["method"] ?? "GET"),
-                headers: JSON.parse(String(flow["headers"] ?? "{}")),
+                headers: { ...JSON.parse(String(flow["headers"] ?? "{}")), ...scopeRequestHeaders(getLoadedScope(params.programId)) },
               }),
             )
             const text = yield* Effect.promise(() => res.text())

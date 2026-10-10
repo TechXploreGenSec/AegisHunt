@@ -1,1 +1,1 @@
-Create a Finding from a TestExecution whose outcome was confirmed. Only path into the graph that ends in an actual Finding node.
+Create a Finding from a TestExecution whose outcome was confirmed. Only path into the graph that ends in an actual Finding node. If the finding's vuln class is program-marked impact-sensitive, impactEvidence (>= 40 chars of demonstrated business impact) is REQUIRED — the call is refused without it.

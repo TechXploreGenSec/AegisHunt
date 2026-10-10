@@ -1,1 +1,1 @@
-Record a candidate vulnerability theory against an endpoint or parameter, before any live testing happens. Requires rationale and methodology source.
+Record a candidate vulnerability theory against an endpoint or parameter, before any live testing happens. Requires rationale and methodology source. To record a triage kill instead, pass triageVerdict REJECT + verdictReason (signals/methodology/fingerprint gates are waived for kills); the node is stored with status 'killed', satisfies coverage, and is excluded from completion demands.
