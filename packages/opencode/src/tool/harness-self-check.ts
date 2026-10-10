@@ -17,7 +17,7 @@ export const Parameters = Schema.Struct({
 
 type Metadata = { sufficient: unknown }
 
-const EXPECTED_AGENTS = ["coordinator", "recon", "verification", "reporting"]
+const EXPECTED_AGENTS = ["coordinator", "recon", "verification", "reporting", "mentor"]
 
 // Permission keys as actually asked by each tool (NOT tool ids — several differ).
 const REQUIRED_PERMS: Record<string, string[]> = {
@@ -91,6 +91,24 @@ function countMarkdown(dir: string, depth: number, budget: { n: number }): numbe
   return found
 }
 
+// Neo4j hands back integers as Integer objects ({ low, high }) and counts as
+// strings in some aggregation paths — never as JS primitives. Mirrors the toNum
+// convention in asset-progress.ts so both read the same values the same way.
+//
+// Must call it as a METHOD (`value.toNumber()`), never detached
+// (`const fn = value.toNumber; fn()`): driver 6.2.0 defines toNumber as
+// `function () { return this.high * … + (this.low >>> 0) }`, so a detached call
+// throws "undefined is not an object (evaluating 'this.high')".
+function toNum(value: unknown): number {
+  if (typeof value === "number") return value
+  if (typeof value === "string") return Number(value) || 0
+  if (value !== null && typeof value === "object" && "toNumber" in value) {
+    const fn = (value as { toNumber: () => number }).toNumber
+    if (typeof fn === "function") return fn.call(value)
+  }
+  return 0
+}
+
 export const HarnessSelfCheckTool = Tool.define<typeof Parameters, Metadata, Agent.Service | Skill.Service>(
   "harness_self_check",
   Effect.gen(function* () {
@@ -114,6 +132,15 @@ export const HarnessSelfCheckTool = Tool.define<typeof Parameters, Metadata, Age
           if (missingAgents.length)
             failures.push(`agents missing: ${missingAgents.join(", ")} — native harness agents not registered (check agent.ts)`)
 
+          const mentorInfo = listed.find((a) => a.name === "mentor")
+          if (mentorInfo) {
+            const leaks: string[] = []
+            for (const key of ["browser_navigate", "finding", "read", "task", "todowrite", "graph", "bot_ops", "methodology", "mitm_replay_flow", "content_discovery"]) {
+              if (Permission.evaluate(key, "*", mentorInfo.permission).action === "allow") leaks.push(key)
+            }
+            if (leaks.length) failures.push(`mentor holds tools (must stay pure): ${leaks.join(", ")}`)
+            else report["mentor"] = { pure: true }
+          }
           // 2. per-agent tool permissions (+ question must stay denied everywhere)
           const permGaps: string[] = []
           for (const name of EXPECTED_AGENTS) {
@@ -126,6 +153,9 @@ export const HarnessSelfCheckTool = Tool.define<typeof Parameters, Metadata, Age
             const q = Permission.evaluate("question", "*", info.permission).action
             if (q !== "deny") permGaps.push(`${name} can question (stop-and-wait fallback open!)`)
           }
+          const coordInfo = listed.find((a) => a.name === "coordinator")
+          if (coordInfo && Permission.evaluate("task", "mentor", coordInfo.permission).action === "deny")
+            permGaps.push("coordinator cannot delegate to mentor (task->mentor denied)")
           report["permissions"] = { gaps: permGaps }
           if (permGaps.length)
             failures.push(`permission gaps: ${permGaps.join("; ")} — fix agent.ts permission blocks`)
@@ -171,7 +201,11 @@ export const HarnessSelfCheckTool = Tool.define<typeof Parameters, Metadata, Age
           let graphOk = false
           try {
             const rows = yield* runReadEffect("RETURN 1 AS ok", {})
-            graphOk = (rows[0] as Record<string, unknown> | undefined)?.["ok"] === 1
+            // Neo4j returns integers as Integer objects ({ low, high }), never as a
+            // JS primitive, so a strict `=== 1` is ALWAYS false — which reported a
+            // permanently-unreachable graph no matter how healthy the DB was. Convert
+            // first, same convention as asset-progress.ts toNum().
+            graphOk = toNum((rows[0] as Record<string, unknown> | undefined)?.["ok"]) === 1
           } catch {
             graphOk = false
           }

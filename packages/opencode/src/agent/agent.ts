@@ -15,6 +15,7 @@ import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import PROMPT_COORDINATOR from "./prompt/coordinator.txt"
+import PROMPT_MENTOR from "./prompt/mentor.txt"
 import PROMPT_RECON from "./prompt/recon.txt"
 import PROMPT_VERIFICATION from "./prompt/verification.txt"
 import PROMPT_REPORTING from "./prompt/reporting.txt"
@@ -266,6 +267,22 @@ const layer = Layer.effect(
             ),
             prompt: PROMPT_SUMMARY,
           },
+          mentor: {
+            name: "mentor",
+            description:
+              "Technical counsel: authors hypotheses, reviews evidence, plans next probes. Pure reasoning — holds no tools, never touches targets or the graph. Top-model seat.",
+            options: {},
+            mode: "all",
+            native: true,
+            prompt: PROMPT_MENTOR,
+            permission: Permission.merge(
+              defaults,
+              Permission.fromConfig({
+                "*": "deny",
+              }),
+              user,
+            ),
+          },
           coordinator: {
             name: "coordinator",
             description:
@@ -339,6 +356,9 @@ const layer = Layer.effect(
                 bot_ops: "allow",
                 methodology: "allow",
                 tool_catalog: "allow",
+                // last rule wins (Permission.evaluate uses findLast) — pin explicitly so no
+                // merge ordering can ever re-open the stop-and-wait question path
+                question: "deny",
               }),
               user,
             ),
