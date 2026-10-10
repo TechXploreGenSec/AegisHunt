@@ -312,7 +312,6 @@ const layer = Layer.effect(
                 bot_notify_hold: "allow",
                 completion: "allow",
                 todo_coverage: "allow",
-                harness: "allow",
                 todowrite: "allow",
                 phase_complete: "allow",
                 task: "allow",

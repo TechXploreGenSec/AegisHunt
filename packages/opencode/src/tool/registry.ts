@@ -79,7 +79,6 @@ import {
   HypothesisCoverageCheckTool,
 } from "./completion-engine"
 import { TodoHonestyCheckTool } from "./todo-honesty-check"
-import { HarnessSelfCheckTool } from "./harness-self-check"
 import { ToolCallAuditGetTool } from "./tool-call-audit-get"
 import { TodoCoverageCheckTool } from "./todo-coverage-check"
 import { withTargetGuard } from "./target-guard"
@@ -222,7 +221,6 @@ const layer = Layer.effect(
     const assetTestPlan = yield* AssetGenerateTestPlanTool
     const hypCoverage = yield* HypothesisCoverageCheckTool
     const todoHonesty = yield* TodoHonestyCheckTool
-    const harnessCheck = yield* HarnessSelfCheckTool
     const auditGet = yield* ToolCallAuditGetTool
     const todoCoverage = yield* TodoCoverageCheckTool
     const agent = yield* Agent.Service
@@ -389,7 +387,6 @@ const layer = Layer.effect(
           assetTestPlan: Tool.init(assetTestPlan),
           hypCoverage: Tool.init(hypCoverage),
           todoHonesty: Tool.init(todoHonesty),
-          harnessCheck: Tool.init(harnessCheck),
           auditGet: Tool.init(auditGet),
           todoCoverage: Tool.init(todoCoverage),
           ...(codeModeTool ? { execute: Tool.init(codeModeTool) } : {}),
@@ -464,7 +461,6 @@ const layer = Layer.effect(
             tool.assetTestPlan,
             tool.hypCoverage,
             tool.todoHonesty,
-            tool.harnessCheck,
             tool.auditGet,
             tool.todoCoverage,
             ...(tool.execute ? [tool.execute] : []),
