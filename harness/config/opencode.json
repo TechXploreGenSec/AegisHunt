@@ -199,16 +199,19 @@
  "subagent_depth": 2,
  "agent": {
   "coordinator": {
-   "model": "opencode/space-bunny-free"
+   "model": "antigravity/gemini-3.8-flash-high"
   },
   "verification": {
    "model": "opencode/space-bunny-free"
   },
   "recon": {
-   "model": "opencode/space-bunny-free"
+   "model": "opencode/mimo-v2.6-flash-free"
   },
   "reporting": {
-   "model": "opencode/space-bunny-free"
+   "model": "opencode/muse-spark-1.3-contributor-free"
+  },
+  "mentor": {
+   "model": "antigravity/claude-opus-4-6-thinking"
   }
  }
 }
